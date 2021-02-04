@@ -1,0 +1,57 @@
+plugins {
+    id 'java-library'
+}
+
+ext {
+    connidVersion = '1.5.0.17'
+    polygonVersion = '3.0.1'
+    connectorName = 'com.cognitumsoftware.connector.odoo'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+group 'com.cognitum-software'
+version '1.0-SNAPSHOT'
+
+configurations {
+    includeInJar
+    implementation.extendsFrom includeInJar
+}
+
+jar {
+    from (configurations.includeInJar) {
+        into "lib"
+    }
+    manifest {
+        attributes(
+                'ConnectorBundle-Version': "${archiveVersion.get()}",
+                'ConnectorBundle-Name': "${connectorName}",
+                'ConnectorBundle-FrameworkVersion': "${connidVersion}"
+        )
+    }
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        url "http://nexus.evolveum.com/nexus/content/repositories/releases"
+    }
+}
+
+dependencies {
+    implementation("net.tirasa.connid:connector-framework:${connidVersion}")
+
+    includeInJar("com.evolveum.polygon:connector-common:${polygonVersion}") {
+        exclude group: 'net.tirasa.connid', module: 'connector-framework'
+    }
+
+    implementation("org.apache.commons:commons-lang3:3.11")
+    implementation("org.apache.xmlrpc:xmlrpc-client:3.1.3")
+
+    testImplementation("junit:junit:4.12")
+    testImplementation("net.tirasa.connid:connector-test-common:${connidVersion}")
+    testImplementation("net.tirasa.connid:connector-framework-contract:${connidVersion}")
+}

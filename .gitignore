@@ -1,0 +1,13 @@
+.gradle/
+.idea/dictionaries
+.idea/libraries
+.idea/markdown-navigator
+.idea/markdown-navigator.xml
+.idea/tasks.xml
+.idea/uiDesigner.xml
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/*.iml
+.idea/modules
+build
+*/out/
