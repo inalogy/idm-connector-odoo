@@ -1,5 +1,6 @@
 plugins {
     id 'java-library'
+    id 'com.avast.gradle.docker-compose' version '0.14.0'
 }
 
 ext {
@@ -48,10 +49,37 @@ dependencies {
         exclude group: 'net.tirasa.connid', module: 'connector-framework'
     }
 
-    implementation("org.apache.commons:commons-lang3:3.11")
-    implementation("org.apache.xmlrpc:xmlrpc-client:3.1.3")
+    includeInJar("org.apache.commons:commons-lang3:3.11")
+    includeInJar("org.apache.xmlrpc:xmlrpc-client:3.1.3") {
+        // already included in jdk 11 and is problem when interfaces loaded from this jar bundled with connector
+        // and implementation comes from midpoint's jdk 11
+        exclude group: 'xml-apis', module: 'xml-apis'
+        // of course we don't need junit in production
+        exclude group: 'junit', module: 'junit'
+    }
 
     testImplementation("junit:junit:4.12")
     testImplementation("net.tirasa.connid:connector-test-common:${connidVersion}")
     testImplementation("net.tirasa.connid:connector-framework-contract:${connidVersion}")
 }
+
+dockerCompose {
+    useComposeFiles = ['docker/docker-compose-midpoint.yml']
+    //captureContainersOutput = true // uncomment to see container output in std out
+    captureContainersOutputToFiles = "${buildDir}/containers-logs/captured"
+}
+
+task testInMidpoint {
+    group 'verification'
+    description 'Builds the connector JAR and uses docker-compose to start midpoint'
+    outputs.upToDateWhen { false }
+
+    doLast {
+        logger.lifecycle("Waiting indefinitely until key + ENTER is pressed...")
+        System.in.read()
+        logger.lifecycle("Stopping...")
+    }
+}
+
+dockerCompose.isRequiredBy(testInMidpoint)
+composeUp.dependsOn jar

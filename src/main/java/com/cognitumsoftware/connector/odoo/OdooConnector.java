@@ -53,7 +53,8 @@ public class OdooConnector extends AbstractOdooConnector {
         LOG.ok("---- Fetching schema from odoo ----");
 
         // fetch model infos
-        Object[] models = (Object[]) executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ, Collections.emptyList());
+        Object[] models = (Object[]) executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ, Collections.emptyList(),
+                Map.of(OPERATION_PARAMETER_FIELDS, asList(MODEL_FIELD_MODEL, MODEL_FIELD_FIELD_IDS, MODEL_FIELD_NAME)));
         Set<String> unmappedTypes = new HashSet<>();
 
         for (Object modelObj : models) {
@@ -73,6 +74,10 @@ public class OdooConnector extends AbstractOdooConnector {
 
                 String fieldName = (String) field.get(MODEL_FIELD_FIELD_NAME);
                 aib.setName(fieldName);
+                aib.setRequired((Boolean) field.get(MODEL_FIELD_FIELD_REQUIRED));
+                aib.setReadable(true);
+                aib.setCreateable(true);
+                aib.setUpdateable((Boolean) field.get(MODEL_FIELD_FIELD_STORE));
 
                 String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
                 Class<?> mappedType = mapOdooTypeToConnIdType(fieldType);
@@ -90,7 +95,7 @@ public class OdooConnector extends AbstractOdooConnector {
 
             sb.defineObjectClass(ocib.build());
 
-            LOG.ok("Model: name={0} model={1} fields={2}",
+            LOG.ok("Model: name={0}, model={1}, fields={2}",
                     model.get(MODEL_FIELD_NAME),
                     model.get(MODEL_FIELD_MODEL),
                     fieldIds.length

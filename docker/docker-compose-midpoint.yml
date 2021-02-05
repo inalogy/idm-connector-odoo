@@ -1,0 +1,56 @@
+version: '3.9'
+
+services:
+
+  idm-midpoint:
+    build: ./midpoint/
+    ports:
+      - 10081:8080
+      - 5005:8000
+    depends_on:
+      - db-idm
+    environment:
+      - REPO_DATABASE_TYPE=postgresql
+      - REPO_HOST=db-idm
+      - REPO_DATABASE=midpoint
+      - REPO_USER=midpoint
+      - REPO_PASSWORD_FILE=/run/secrets/db-idm-secret
+      - MP_KEYSTORE_PASSWORD_FILE=/run/secrets/midpoint-keystore
+      - MP_JAVA_OPTS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:8000
+    secrets:
+      - db-idm-secret
+      - midpoint-keystore
+    volumes:
+      # include the built image
+      - ./../build/libs:/opt/midpoint/var/icf-connectors
+      - midpoint_data:/opt/midpoint/var
+
+  db-idm:
+    image: postgres:12.2
+    ports:
+      - 15432:5432
+    environment:
+      - POSTGRES_DB=midpoint
+      - POSTGRES_USER=midpoint
+      - POSTGRES_PASSWORD_FILE=/run/secrets/db-idm-secret
+    secrets:
+      - db-idm-secret
+    volumes:
+      - pg_idm_data:/var/lib/postgresql/data
+
+secrets:
+  db-idm-secret:
+    file: ./secret_db_idm.txt
+  midpoint-keystore:
+    file: ./midpoint_keystore.txt
+
+volumes:
+  pg_idm_data:
+    driver: local
+  midpoint_data:
+    driver: local
+
+networks:
+  default:
+    external:
+      name: odoo-connector-test-network
