@@ -1,45 +1,87 @@
 package com.cognitumsoftware.connector.odoo;
 
-import org.apache.xmlrpc.XmlRpcException;
+import com.cognitumsoftware.connector.odoo.schema.OdooField;
+import com.cognitumsoftware.connector.odoo.schema.OdooModel;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
+import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
 import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.AttributeInfoBuilder;
+import org.identityconnectors.framework.common.objects.AttributeDelta;
+import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.ObjectClassInfoBuilder;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Schema;
-import org.identityconnectors.framework.common.objects.SchemaBuilder;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
+import org.identityconnectors.framework.spi.Configuration;
 import org.identityconnectors.framework.spi.ConnectorClass;
+import org.identityconnectors.framework.spi.PoolableConnector;
+import org.identityconnectors.framework.spi.operations.CreateOp;
+import org.identityconnectors.framework.spi.operations.DeleteOp;
+import org.identityconnectors.framework.spi.operations.SchemaOp;
+import org.identityconnectors.framework.spi.operations.SearchOp;
+import org.identityconnectors.framework.spi.operations.TestOp;
+import org.identityconnectors.framework.spi.operations.UpdateDeltaOp;
 
-import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
-import static java.util.Arrays.asList;
+import static com.cognitumsoftware.connector.odoo.OdooConstants.OPERATION_CREATE;
+import static com.cognitumsoftware.connector.odoo.OdooConstants.OPERATION_DELETE;
 import static java.util.Collections.singletonList;
 
 @ConnectorClass(displayNameKey = "odoo.connector.display", configurationClass = OdooConfiguration.class)
-public class OdooConnector extends AbstractOdooConnector {
+public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, SearchOp<Filter>, TestOp, SchemaOp, UpdateDeltaOp {
 
     private static final Log LOG = Log.getLog(OdooConnector.class);
 
+    private OdooConfiguration configuration;
+    private OdooClient client;
+    private OdooModelCache cache;
+    private OdooSchema schemaFetcher;
+    private OdooSearch searcher;
+
     @Override
-    public void doTest() throws XmlRpcException {
-        Object result = client.execute(xmlRpcClientConfigCommon, "version", Collections.emptyList());
-        LOG.ok("Test connection result: {0}", result);
+    public Configuration getConfiguration() {
+        return configuration;
+    }
+
+    @Override
+    public void init(Configuration cfg) {
+        this.configuration = (OdooConfiguration) cfg;
+        this.client = new OdooClient(configuration);
+        this.cache = new OdooModelCache(client);
+        this.schemaFetcher = new OdooSchema(client);
+        this.searcher = new OdooSearch(client);
+    }
+
+    @Override
+    public void dispose() {
+        // nothing to cleanup here
+    }
+
+    @Override
+    public void checkAlive() {
+        // for now we don't have a connection
+    }
+
+    @Override
+    public void test() {
+        client.executeOperation(() -> {
+            Object result = client.getClient().execute(client.getXmlRpcClientConfigCommon(), "version", Collections.emptyList());
+            LOG.ok("Test connection result: {0}", result);
+            return null;
+        });
     }
 
     public void listDatabases() {
-        executeOperation(() -> {
-            Object result = client.execute(xmlRpcClientConfigDb, "list", Collections.emptyList());
+        client.executeOperation(() -> {
+            Object result = client.getClient().execute(client.getXmlRpcClientConfigDb(), "list", Collections.emptyList());
 
             LOG.ok("Listing database result: {0}", Arrays.toString((Object[]) result));
             return null;
@@ -47,113 +89,79 @@ public class OdooConnector extends AbstractOdooConnector {
     }
 
     @Override
-    public Schema doSchema() throws XmlRpcException {
-        SchemaBuilder sb = new SchemaBuilder(this.getClass());
+    public Schema schema() {
+        return schemaFetcher.fetch(this.getClass());
+    }
 
-        LOG.ok("---- Fetching schema from odoo ----");
+    @Override
+    public Uid create(ObjectClass objectClass, Set<Attribute> createAttributes, OperationOptions options) {
+        return client.executeOperationWithAuthentication(() -> {
+            // prepare
+            OdooModel model = cache.getModel(objectClass);
 
-        // fetch model infos
-        Object[] models = (Object[]) executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ, Collections.emptyList(),
-                Map.of(OPERATION_PARAMETER_FIELDS, asList(MODEL_FIELD_MODEL, MODEL_FIELD_FIELD_IDS, MODEL_FIELD_NAME)));
-        Set<String> unmappedTypes = new HashSet<>();
+            Map<String, Object> fields = new HashMap<>();
 
-        for (Object modelObj : models) {
-            Map<String, Object> model = (Map<String, Object>) modelObj;
-
-            ObjectClassInfoBuilder ocib = new ObjectClassInfoBuilder();
-            ocib.setType((String) model.get(MODEL_FIELD_MODEL));
-
-            // fetch field infos
-            Object[] fieldIds = (Object[]) model.get(MODEL_FIELD_FIELD_IDS);
-            Object[] fields = (Object[]) executeXmlRpc(MODEL_NAME_MODEL_FIELDS, OPERATION_READ, singletonList(asList(fieldIds)));
-
-            for (Object fieldObj : fields) {
-                Map<String, Object> field = (Map<String, Object>) fieldObj;
-
-                AttributeInfoBuilder aib = new AttributeInfoBuilder();
-
-                String fieldName = (String) field.get(MODEL_FIELD_FIELD_NAME);
-                aib.setName(fieldName);
-                aib.setRequired((Boolean) field.get(MODEL_FIELD_FIELD_REQUIRED));
-                aib.setReadable(true);
-                aib.setCreateable(true);
-                aib.setUpdateable((Boolean) field.get(MODEL_FIELD_FIELD_STORE));
-
-                String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
-                Class<?> mappedType = mapOdooTypeToConnIdType(fieldType);
-                if (mappedType == null) {
-                    if (!unmappedTypes.contains(fieldType)) {
-                        LOG.warn("Unable to map odoo type ''{0}'' to connId type, ignoring field ''{1}''", fieldType, fieldName);
-                        unmappedTypes.add(fieldType);
-                    }
+            for (Attribute attr : createAttributes) {
+                if (attr.getName().equals(Uid.NAME) || attr.getName().equals(Name.NAME)) {
+                    // we ignore these attributes as they are the ID of the record to be created in odoo
                     continue;
                 }
-                aib.setType(mappedType);
 
-                ocib.addAttributeInfo(aib.build());
+                OdooField field = model.getField(attr.getName());
+                if (field == null) {
+                    throw new ConnectorException("Did not find odoo field with name '" + attr.getName() + "' in odoo model.");
+                }
+
+                Object mappedValue;
+                if (attr.getValue() == null || attr.getValue().isEmpty()) {
+                    mappedValue = null;
+                }
+                else if (attr.getValue().size() > 1) {
+                    throw new InvalidAttributeValueException("Multiple attribute values not supported in create operation");
+                }
+                else {
+                    mappedValue = field.getType().mapToOdooCreateRecordValue(attr.getValue().iterator().next());
+                }
+
+                fields.put(field.getName(), mappedValue);
             }
 
-            sb.defineObjectClass(ocib.build());
-
-            LOG.ok("Model: name={0}, model={1}, fields={2}",
-                    model.get(MODEL_FIELD_NAME),
-                    model.get(MODEL_FIELD_MODEL),
-                    fieldIds.length
-            );
-        }
-
-        LOG.ok("Models: {0}", models.length);
-        LOG.ok("---- Fetching schema end ----");
-
-        return sb.build();
-    }
-
-    private Class<?> mapOdooTypeToConnIdType(String odooType) {
-        switch (odooType) {
-            case "char":
-            case "text":
-            case "selection":
-            case "html":
-                return String.class;
-            case "boolean":
-                return Boolean.class;
-            case "integer":
-                return Integer.class;
-            case "float":
-                return Float.class;
-            case "date":
-            case "datetime":
-                return ZonedDateTime.class;
-            case "binary":
-                return byte[].class;
-            default:
-                return null;
-        }
+            // execute create
+            Integer id = (Integer) client.executeXmlRpc(model.getName(), OPERATION_CREATE, singletonList(fields));
+            return new Uid(id.toString());
+        });
     }
 
     @Override
-    public Uid doCreate(ObjectClass objectClass, Set<Attribute> createAttributes, OperationOptions options) {
+    public Set<AttributeDelta> updateDelta(ObjectClass objectClass, Uid uid, Set<AttributeDelta> set, OperationOptions operationOptions) {
         throw new UnsupportedOperationException("tbd");
     }
 
     @Override
-    public void doDelete(ObjectClass objectClass, Uid uid, OperationOptions options) {
-        throw new UnsupportedOperationException("tbd");
+    public void delete(ObjectClass objectClass, Uid uid, OperationOptions options) {
+        client.executeOperationWithAuthentication(() -> {
+            // prepare
+            OdooModel model = cache.getModel(objectClass);
+            Integer id = Integer.valueOf(uid.getUidValue());
+
+            // execute delete
+            client.executeXmlRpc(model.getName(), OPERATION_DELETE, singletonList(singletonList(id)));
+            return null;
+        });
     }
 
     @Override
-    public FilterTranslator<Filter> doCreateFilterTranslator(ObjectClass objectClass, OperationOptions options) {
-        throw new UnsupportedOperationException("tbd");
+    public FilterTranslator<Filter> createFilterTranslator(ObjectClass objectClass, OperationOptions options) {
+        return o -> o == null ? Collections.emptyList() : singletonList(o);
     }
 
     @Override
-    public void doExecuteQuery(ObjectClass objectClass, Filter query, ResultsHandler handler, OperationOptions options) {
-        throw new UnsupportedOperationException("tbd");
-    }
-
-    @Override
-    public Uid doUpdate(ObjectClass objectClass, Uid uid, Set<Attribute> replaceAttributes, OperationOptions options) {
-        throw new UnsupportedOperationException("tbd");
+    public void executeQuery(ObjectClass objectClass, Filter query, ResultsHandler handler, OperationOptions options) {
+        client.executeOperationWithAuthentication(() -> {
+            OdooModel model = cache.getModel(objectClass);
+            searcher.search(model, query, handler, options);
+            return null;
+        });
     }
 
 }

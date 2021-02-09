@@ -67,6 +67,8 @@ dockerCompose {
     useComposeFiles = ['docker/docker-compose-midpoint.yml']
     //captureContainersOutput = true // uncomment to see container output in std out
     captureContainersOutputToFiles = "${buildDir}/containers-logs/captured"
+    removeContainers = false
+    removeVolumes = false
 }
 
 task testInMidpoint {

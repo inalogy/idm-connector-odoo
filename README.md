@@ -1,5 +1,13 @@
 # Odoo connId connector
 
+## How to build
+
+Call gradle task *build*:
+
+> ./gradlew clean build
+
+The built connector jar file can then be found in folder *./build/libs/*.
+
 ## How to Test Connector
 
 ### Using unit test

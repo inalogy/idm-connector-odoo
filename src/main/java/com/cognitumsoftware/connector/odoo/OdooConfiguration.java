@@ -36,7 +36,7 @@ public class OdooConfiguration extends AbstractConfiguration {
         required("password", password, p -> p != null && !new GuardedString().equals(p));
     }
 
-    @ConfigurationProperty(displayMessageKey = "odoo.config.url", helpMessageKey = "odoo.config.url.help", required = true)
+    @ConfigurationProperty(displayMessageKey = "odoo.config.url", helpMessageKey = "odoo.config.url.help", order = 1, required = true)
     public String getUrl() {
         return url;
     }
@@ -45,7 +45,7 @@ public class OdooConfiguration extends AbstractConfiguration {
         this.url = StringUtils.removeEnd(url, "/");
     }
 
-    @ConfigurationProperty(displayMessageKey = "odoo.config.database", helpMessageKey = "odoo.config.database.help", required = true)
+    @ConfigurationProperty(displayMessageKey = "odoo.config.database", helpMessageKey = "odoo.config.database.help", order = 2, required = true)
     public String getDatabase() {
         return database;
     }
@@ -54,7 +54,7 @@ public class OdooConfiguration extends AbstractConfiguration {
         this.database = database;
     }
 
-    @ConfigurationProperty(displayMessageKey = "odoo.config.username", helpMessageKey = "odoo.config.username.help", required = true)
+    @ConfigurationProperty(displayMessageKey = "odoo.config.username", helpMessageKey = "odoo.config.username.help", order = 3, required = true)
     public String getUsername() {
         return username;
     }
@@ -63,7 +63,7 @@ public class OdooConfiguration extends AbstractConfiguration {
         this.username = username;
     }
 
-    @ConfigurationProperty(displayMessageKey = "odoo.config.password", helpMessageKey = "odoo.config.password.help", required = true)
+    @ConfigurationProperty(displayMessageKey = "odoo.config.password", helpMessageKey = "odoo.config.password.help", order = 4, required = true)
     public GuardedString getPassword() {
         return password;
     }
