@@ -30,47 +30,65 @@ public class OdooModelCache {
         OdooModel result = modelCache.get(modelName);
 
         if (result == null) {
-            Object[] models = (Object[]) client.executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ,
-                    singletonList(singletonList(asList(MODEL_FIELD_MODEL, OPERATOR_EQUALS, modelName))),
-                    Map.of(OPERATION_PARAMETER_FIELDS, asList(MODEL_FIELD_MODEL, MODEL_FIELD_FIELD_IDS)));
-
-            if (models.length != 1) {
-                throw new ConnectorException("Unable to retrieve odoo model '" + modelName + "'");
-            }
-
-            Map<String, Object> model = (Map<String, Object>) models[0];
-            result = new OdooModel();
-            result.setName((String) model.get(MODEL_FIELD_MODEL));
-            result.setFields(new HashMap<>());
-
-            Object[] fieldIds = (Object[]) model.get(MODEL_FIELD_FIELD_IDS);
-            Object[] fields = (Object[]) client.executeXmlRpc(MODEL_NAME_MODEL_FIELDS, OPERATION_READ, singletonList(asList(fieldIds)));
-
-            for (Object fieldObj : fields) {
-                Map<String, Object> field = (Map<String, Object>) fieldObj;
-
-                String fieldName = (String) field.get(MODEL_FIELD_FIELD_NAME);
-                if (fieldName.equals(MODEL_FIELD_FIELD_NAME_ID)) {
-                    // special handling of ID attribute, see below
-                    continue;
-                }
-
-                OdooField f = new OdooField();
-                f.setModel(result);
-                f.setName(fieldName);
-
-                String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
-                f.setType(OdooTypeMapping.map(fieldType));
-
-                if (f.getType() != null) {
-                    result.getFields().put(f.getName(), f);
-                }
-            }
-
+            result = retrieveModel(modelName);
             modelCache.put(modelName, result);
         }
 
         return result;
+    }
+
+    private OdooModel retrieveModel(String modelName) {
+        // retrieve model info
+        Object[] models = (Object[]) client.executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ,
+                singletonList(singletonList(asList(MODEL_FIELD_MODEL, OPERATOR_EQUALS, modelName))),
+                Map.of(OPERATION_PARAMETER_FIELDS, asList(MODEL_FIELD_MODEL, MODEL_FIELD_FIELD_IDS)));
+
+        if (models.length != 1) {
+            throw new ConnectorException("Unable to retrieve odoo model '" + modelName + "'");
+        }
+
+        Map<String, Object> model = (Map<String, Object>) models[0];
+        OdooModel result = new OdooModel();
+        result.setName((String) model.get(MODEL_FIELD_MODEL));
+        result.setFields(new HashMap<>());
+
+        // retrieve model field infos
+        Object[] fieldIds = (Object[]) model.get(MODEL_FIELD_FIELD_IDS);
+        Object[] fields = (Object[]) client.executeXmlRpc(MODEL_NAME_MODEL_FIELDS, OPERATION_READ, singletonList(asList(fieldIds)));
+
+        for (Object fieldObj : fields) {
+            Map<String, Object> field = (Map<String, Object>) fieldObj;
+
+            String fieldName = (String) field.get(MODEL_FIELD_FIELD_NAME);
+            if (fieldName.equals(MODEL_FIELD_FIELD_NAME_ID)) {
+                // special handling of ID attribute, see below
+                continue;
+            }
+
+            OdooField f = new OdooField();
+            f.setModel(result);
+            f.setName(fieldName);
+
+            String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
+            f.setType(OdooTypeMapping.map(fieldType));
+
+            if (f.getType() != null) {
+                result.getFields().put(f.getName(), f);
+            }
+        }
+
+        // add special id field that is always present but not retrieved with query above
+        OdooField f = new OdooField();
+        f.setModel(result);
+        f.setName(MODEL_FIELD_FIELD_NAME_ID);
+        f.setType(OdooTypeMapping.ID_TYPE);
+        result.getFields().put(f.getName(), f);
+
+        return result;
+    }
+
+    public void evict() {
+        modelCache.clear();
     }
 
 }

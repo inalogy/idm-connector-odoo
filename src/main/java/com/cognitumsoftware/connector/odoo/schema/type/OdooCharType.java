@@ -1,6 +1,6 @@
 package com.cognitumsoftware.connector.odoo.schema.type;
 
-public class OdooCharType implements OdooType {
+public class OdooCharType extends OdooType {
 
     @Override
     public Class<?> getMappedConnIdType() {

@@ -2,7 +2,7 @@ package com.cognitumsoftware.connector.odoo;
 
 import com.cognitumsoftware.connector.odoo.schema.OdooField;
 import com.cognitumsoftware.connector.odoo.schema.OdooModel;
-import org.apache.commons.lang3.ObjectUtils;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
@@ -30,6 +30,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
@@ -62,7 +63,7 @@ public class OdooSearch {
     public void search(OdooModel model, Filter query, ResultsHandler handler, OperationOptions options) {
         // prepare
         Map<String, Object> params = prepareQueryParameters(options);
-        List<Object> filter = query == null ? emptyList() : singletonList(translateFilter(query));
+        List<Object> filter = query == null ? emptyList() : singletonList(translateFilter(model, query));
 
         // execute search in odoo
         Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ, filter, params);
@@ -88,11 +89,16 @@ public class OdooSearch {
         }
     }
 
-    private List<Object> translateFilter(Filter query) {
+    private List<Object> translateFilter(OdooModel model, Filter query) {
         if (query instanceof AttributeFilter) {
             AttributeFilter af = (AttributeFilter) query;
-            Object value;
 
+            OdooField field = model.getField(mapSpecialAttributeNameToOdooField(af.getAttribute().getName()));
+            if (field == null) {
+                throw new ConnectorException("Did not find odoo field with name '" + af.getAttribute().getName() + "' in odoo model.");
+            }
+
+            Object value;
             if (af.getAttribute().getValue() == null || af.getAttribute().getValue().isEmpty()) {
                 value = null;
             }
@@ -100,21 +106,21 @@ public class OdooSearch {
                 throw new UnsupportedOperationException("Multiple attribute values not supported for AttributeFilter");
             }
             else {
-                value = af.getAttribute().getValue().iterator().next();
+                value = field.getType().mapToOdooSearchFilterValue(af.getAttribute().getValue().iterator().next());
             }
 
             // as documented in odoo API: use tuple [field name, operator, value]
 
             if (query instanceof StartsWithFilter) {
                 return singletonList(asList(
-                        mapSpecialAttributeNameToOdooField(af.getAttribute().getName()),
+                        field.getName(),
                         OPERATOR_LIKE2,
                         // TODO: escaping undocumented in odoo API but we should escape attribute value (more occurrences see below)
                         value + OPERATOR_LIKE_ANY_STRING));
             }
             else if (query instanceof EndsWithFilter) {
                 return singletonList(asList(
-                        mapSpecialAttributeNameToOdooField(af.getAttribute().getName()),
+                        field.getName(),
                         OPERATOR_LIKE2,
                         OPERATOR_LIKE_ANY_STRING + value));
             }
@@ -122,7 +128,7 @@ public class OdooSearch {
             String operator = attributeFilterClassToOperatorMap.get(query.getClass());
             if (operator != null) {
                 return singletonList(asList(
-                        mapSpecialAttributeNameToOdooField(af.getAttribute().getName()),
+                        field.getName(),
                         operator,
                         value));
             }
@@ -131,7 +137,7 @@ public class OdooSearch {
             NotFilter not = (NotFilter) query;
             List<Object> result = new LinkedList<>();
             result.add(OPERATOR_NOT);
-            result.addAll(translateFilter(not.getFilter()));
+            result.addAll(translateFilter(model, not.getFilter()));
             return result;
         }
         else if (query instanceof CompositeFilter) {
@@ -140,13 +146,13 @@ public class OdooSearch {
                 CompositeFilter cf = (CompositeFilter) query;
                 List<Object> result = new LinkedList<>();
                 result.add(operator);
-                result.addAll(translateFilter(cf.getLeft()));
-                result.addAll(translateFilter(cf.getRight()));
+                result.addAll(translateFilter(model, cf.getLeft()));
+                result.addAll(translateFilter(model, cf.getRight()));
                 return result;
             }
         }
 
-        throw new UnsupportedOperationException("Filter of type " + query.getClass().getName() + " is not supported.");
+        throw new UnsupportedOperationException("Filter of type " + query.getClass().getName() + " is not supported for search.");
     }
 
     private Map<String, Object> prepareQueryParameters(OperationOptions options) {
@@ -183,7 +189,7 @@ public class OdooSearch {
         }
 
         // partial retrieval of attributes
-        String[] retrieve = ObjectUtils.defaultIfNull(options.getAttributesToGet(), new String[0]);
+        String[] retrieve = Objects.requireNonNullElse(options.getAttributesToGet(), new String[0]);
         List<String> effectiveRetrieve = Arrays.stream(retrieve)
                 .filter(attr -> !attr.equals(Name.NAME))
                 .filter(attr -> !attr.equals(Uid.NAME))

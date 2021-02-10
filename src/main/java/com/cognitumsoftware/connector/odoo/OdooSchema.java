@@ -72,7 +72,7 @@ public class OdooSchema {
                 aib.setRequired((Boolean) field.get(MODEL_FIELD_FIELD_REQUIRED));
                 aib.setReadable(true);
                 aib.setCreateable(true);
-                aib.setUpdateable((Boolean) field.get(MODEL_FIELD_FIELD_STORE));
+                aib.setUpdateable((Boolean) field.get(MODEL_FIELD_FIELD_STORE)); // computed field?
                 aib.setReturnedByDefault(false);
 
                 String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
@@ -82,6 +82,7 @@ public class OdooSchema {
                         LOG.warn("Unable to map odoo type ''{0}'' to connId type, ignoring field ''{1}''", fieldType, fieldName);
                         unmappedTypes.add(fieldType);
                     }
+                    LOG.ok("Skipping field ''{0}'' with type={1} and details={2}", fieldName, fieldType, field);
                     continue;
                 }
                 aib.setType(mappedType.getMappedConnIdType());
@@ -94,7 +95,7 @@ public class OdooSchema {
 
             sb.defineObjectClass(ocib.build());
 
-            LOG.ok("Model: name={0}, model={1}, fields={2}",
+            LOG.info("Model: name={0}, model={1}, fields={2}",
                     model.get(MODEL_FIELD_NAME),
                     model.get(MODEL_FIELD_MODEL),
                     fieldIds.length

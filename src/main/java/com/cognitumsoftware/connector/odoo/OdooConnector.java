@@ -31,8 +31,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static com.cognitumsoftware.connector.odoo.OdooConstants.OPERATION_CREATE;
-import static com.cognitumsoftware.connector.odoo.OdooConstants.OPERATION_DELETE;
+import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
+import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
 @ConnectorClass(displayNameKey = "odoo.connector.display", configurationClass = OdooConfiguration.class)
@@ -90,6 +90,9 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
 
     @Override
     public Schema schema() {
+        cache.evict(); // when someone resolves the schema (again), it might have changed, so clear current cache
+
+        // delegate schema resolution
         return schemaFetcher.fetch(this.getClass());
     }
 
@@ -112,18 +115,18 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
                     throw new ConnectorException("Did not find odoo field with name '" + attr.getName() + "' in odoo model.");
                 }
 
-                Object mappedValue;
+                Object val;
                 if (attr.getValue() == null || attr.getValue().isEmpty()) {
-                    mappedValue = null;
+                    val = null;
                 }
                 else if (attr.getValue().size() > 1) {
                     throw new InvalidAttributeValueException("Multiple attribute values not supported in create operation");
                 }
                 else {
-                    mappedValue = field.getType().mapToOdooCreateRecordValue(attr.getValue().iterator().next());
+                    val = attr.getValue().iterator().next();
                 }
 
-                fields.put(field.getName(), mappedValue);
+                fields.put(field.getName(), field.getType().mapToOdooCreateRecordValue(val));
             }
 
             // execute create
@@ -133,8 +136,52 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
     }
 
     @Override
-    public Set<AttributeDelta> updateDelta(ObjectClass objectClass, Uid uid, Set<AttributeDelta> set, OperationOptions operationOptions) {
-        throw new UnsupportedOperationException("tbd");
+    public Set<AttributeDelta> updateDelta(ObjectClass objectClass, Uid uid, Set<AttributeDelta> attributeDeltas,
+            OperationOptions operationOptions) {
+
+        client.executeOperationWithAuthentication(() -> {
+            // prepare
+            OdooModel model = cache.getModel(objectClass);
+            Integer id = Integer.valueOf(uid.getUidValue());
+
+            Map<String, Object> fields = new HashMap<>();
+
+            for (AttributeDelta delta : attributeDeltas) {
+                if (delta.getName().equals(Uid.NAME) || delta.getName().equals(Name.NAME)) {
+                    // we ignore these attributes as they are the ID of the record to be updated in odoo
+                    continue;
+                }
+
+                OdooField field = model.getField(delta.getName());
+                if (field == null) {
+                    throw new ConnectorException("Did not find odoo field with name '" + delta.getName() + "' in odoo model.");
+                }
+
+                Object val;
+                if (delta.getValuesToReplace() != null) {
+                    if (delta.getValuesToReplace().isEmpty()) {
+                        val = null;
+                    }
+                    else if (delta.getValuesToReplace().size() > 1) {
+                        throw new InvalidAttributeValueException("Multiple attribute values not supported in update operation");
+                    }
+                    else {
+                        val = delta.getValuesToReplace().iterator().next();
+                    }
+                }
+                else {
+                    throw new InvalidAttributeValueException("Delta add/remove not supported");
+                }
+
+                fields.put(field.getName(), field.getType().mapToOdooUpdateRecordValue(val));
+            }
+
+            // execute update
+            client.executeXmlRpc(model.getName(), OPERATION_UPDATE, asList(singletonList(id), fields));
+            return null;
+        });
+
+        return Collections.emptySet();
     }
 
     @Override
@@ -152,6 +199,7 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
 
     @Override
     public FilterTranslator<Filter> createFilterTranslator(ObjectClass objectClass, OperationOptions options) {
+        // filter translation is done within executeQuery
         return o -> o == null ? Collections.emptyList() : singletonList(o);
     }
 
