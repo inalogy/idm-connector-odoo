@@ -51,7 +51,8 @@ public class OdooSchema {
             Map<String, Object> model = (Map<String, Object>) modelObj;
 
             ObjectClassInfoBuilder ocib = new ObjectClassInfoBuilder();
-            ocib.setType((String) model.get(MODEL_FIELD_MODEL));
+            String modelName = (String) model.get(MODEL_FIELD_MODEL);
+            ocib.setType(modelName);
 
             // fetch field infos
             Object[] fieldIds = (Object[]) model.get(MODEL_FIELD_FIELD_IDS);
@@ -72,7 +73,7 @@ public class OdooSchema {
                 aib.setRequired((Boolean) field.get(MODEL_FIELD_FIELD_REQUIRED));
                 aib.setReadable(true);
                 aib.setCreateable(true);
-                aib.setUpdateable((Boolean) field.get(MODEL_FIELD_FIELD_STORE)); // computed field?
+                aib.setUpdateable(true);
                 aib.setReturnedByDefault(false);
 
                 String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
@@ -82,7 +83,12 @@ public class OdooSchema {
                         LOG.warn("Unable to map odoo type ''{0}'' to connId type, ignoring field ''{1}''", fieldType, fieldName);
                         unmappedTypes.add(fieldType);
                     }
-                    LOG.ok("Skipping field ''{0}'' with type={1} and details={2}", fieldName, fieldType, field);
+                    LOG.ok("Skipping field ''{0}'' with unmapped type={1} and details={2}", fieldName, fieldType, field);
+                    continue;
+                }
+                mappedType = mappedType.refine(modelName, fieldName, field);
+                if (mappedType == null) {
+                    LOG.ok("Skipping field ''{0}'' with unrefined type={1} and details={2}", fieldName, fieldType, field);
                     continue;
                 }
                 aib.setType(mappedType.getMappedConnIdType());

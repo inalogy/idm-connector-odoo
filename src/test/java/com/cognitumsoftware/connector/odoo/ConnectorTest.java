@@ -15,10 +15,16 @@ import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
+
+import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
+import static java.util.Arrays.asList;
+import static java.util.Collections.singletonList;
 
 public class ConnectorTest {
 
@@ -47,21 +53,60 @@ public class ConnectorTest {
     @Test
     public void testSchemaRetrieval() {
         Schema s = connector.schema();
-        s.getObjectClassInfo().stream().filter(oci -> oci.getType().equals("res.users")).forEach(oci -> {
+        s.getObjectClassInfo().stream().filter(oci -> oci.getType().equals("res.partner")).forEach(oci -> {
             System.out.println("----------------------------------");
             System.out.println(oci.getType());
 
-            oci.getAttributeInfo().stream().sorted(Comparator.comparing(AttributeInfo::getName)).forEach(ai -> {
-                System.out.println("-> Attribute " + ai.getName() + ": type=" + ai.getType().getName() + " flags=" + ai.getFlags());
-            });
+            oci.getAttributeInfo().stream().sorted(Comparator.comparing(AttributeInfo::getName)).forEach(ai ->
+                    System.out.println("-> Attribute " + ai.getName() + ": type=" + ai.getType().getName() + " flags=" + ai.getFlags()));
 
             System.out.println("----------------------------------");
             System.out.println("Filtered by updatable:");
-            oci.getAttributeInfo().stream().sorted(Comparator.comparing(AttributeInfo::getName)).filter(ai -> !ai.getFlags().contains(
-                    AttributeInfo.Flags.NOT_UPDATEABLE)).forEach(ai -> {
-                System.out.println("-> Attribute " + ai.getName() + ": type=" + ai.getType().getName() + " flags=" + ai.getFlags());
-            });
+            oci.getAttributeInfo().stream().sorted(Comparator.comparing(AttributeInfo::getName))
+                    .filter(ai -> !ai.getFlags().contains(AttributeInfo.Flags.NOT_UPDATEABLE))
+                    .forEach(ai ->
+                            System.out.println(
+                                    "-> Attribute " + ai.getName() + ": type=" + ai.getType().getName() + " flags=" + ai.getFlags()));
         });
+    }
+
+    @Test
+    public void dumpModel() {
+        OdooClient client = new OdooClient((OdooConfiguration) connector.getConfiguration());
+        String modelName = "res.users";
+
+        client.executeOperationWithAuthentication(() -> {
+            Object[] models = (Object[]) client.executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ,
+                    singletonList(singletonList(asList(MODEL_FIELD_MODEL, OPERATOR_EQUALS, modelName))),
+                    Map.of());
+
+            Map<String, Object> model = (Map<String, Object>) models[0];
+
+            System.out.println("----------- Model ------------");
+            model.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(this::dumpField);
+
+            Object[] fieldIds = (Object[]) model.get(MODEL_FIELD_FIELD_IDS);
+            Object[] fields = (Object[]) client.executeXmlRpc(MODEL_NAME_MODEL_FIELDS, OPERATION_READ, singletonList(asList(fieldIds)));
+
+            System.out.println("----------- Fields ------------");
+
+            for (var fieldObj : fields) {
+                Map<String, Object> field = (Map<String, Object>) fieldObj;
+
+                System.out.println("--- Field: " + field.get(MODEL_FIELD_FIELD_NAME) + " ---");
+                field.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(this::dumpField);
+            }
+
+            return null;
+        });
+    }
+
+    private void dumpField(Map.Entry<String, Object> field) {
+        Object value = field.getValue();
+        if (value.getClass().isArray()) {
+            value = Arrays.toString((Object[]) value);
+        }
+        System.out.println(field.getKey() + ": " + value);
     }
 
     @Test

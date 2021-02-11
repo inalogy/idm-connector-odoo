@@ -13,7 +13,8 @@ public final class OdooTypeMapping {
             Map.entry("boolean", new OdooBooleanType()),
             Map.entry("date", new OdooDateType()),
             Map.entry("datetime", new OdooDateTimeType()),
-            Map.entry("binary", new OdooBinaryType())
+            Map.entry("binary", new OdooBinaryType()),
+            Map.entry("selection", new OdooSelectionType())
     );
 
     public static final OdooType ID_TYPE = new OdooIdType();

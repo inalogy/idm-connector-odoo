@@ -16,7 +16,9 @@ public final class OdooConstants {
     public final static String MODEL_FIELD_FIELD_NAME_ID = "id";
     public final static String MODEL_FIELD_FIELD_TYPE = "ttype";
     public final static String MODEL_FIELD_FIELD_REQUIRED = "required";
-    public final static String MODEL_FIELD_FIELD_STORE = "store"; // false means computed field
+    public final static String MODEL_FIELD_FIELD_STORE = "store"; // false means not stored in database but computed
+    public final static String MODEL_FIELD_FIELD_SELECTION = "selection";
+    public final static String MODEL_FIELD_FIELD_SELECTION_ADD = "selection_add";
 
     public final static String OPERATION_SEARCH_READ = "search_read";
     public final static String OPERATION_READ = "read";

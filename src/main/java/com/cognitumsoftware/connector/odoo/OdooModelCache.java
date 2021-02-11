@@ -2,6 +2,7 @@ package com.cognitumsoftware.connector.odoo;
 
 import com.cognitumsoftware.connector.odoo.schema.OdooField;
 import com.cognitumsoftware.connector.odoo.schema.OdooModel;
+import com.cognitumsoftware.connector.odoo.schema.type.OdooType;
 import com.cognitumsoftware.connector.odoo.schema.type.OdooTypeMapping;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.ObjectClass;
@@ -70,10 +71,13 @@ public class OdooModelCache {
             f.setName(fieldName);
 
             String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
-            f.setType(OdooTypeMapping.map(fieldType));
+            OdooType type = OdooTypeMapping.map(fieldType);
 
-            if (f.getType() != null) {
-                result.getFields().put(f.getName(), f);
+            if (type != null) {
+                f.setType(type.refine(modelName, fieldName, field));
+                if (f.getType() != null) {
+                    result.getFields().put(f.getName(), f);
+                }
             }
         }
 
