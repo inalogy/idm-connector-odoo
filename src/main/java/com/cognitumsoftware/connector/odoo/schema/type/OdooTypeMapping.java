@@ -14,7 +14,10 @@ public final class OdooTypeMapping {
             Map.entry("date", new OdooDateType()),
             Map.entry("datetime", new OdooDateTimeType()),
             Map.entry("binary", new OdooBinaryType()),
-            Map.entry("selection", new OdooSelectionType())
+            Map.entry("selection", new OdooSelectionType()),
+            Map.entry("many2many", new OdooOneOrManyToManyType()),
+            Map.entry("one2many", new OdooOneOrManyToManyType()),
+            Map.entry("many2one", new OdooManyToOneType())
     );
 
     public static final OdooType ID_TYPE = new OdooIdType();

@@ -1,0 +1,62 @@
+<!--
+This will help to create a midpoint role from an odoo group:
+- assign the entitlement (odoo group)
+- assign an inducement that will add the entitlement to "groups_id" of default account "res.users" via the association (see resource)
+ -->
+
+<objectTemplate xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+                xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+                xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3" oid="f75e0bcf-1754-414d-a74f-07222bbfcb77"
+                version="1">
+    <name>Odoo Entitlement Template</name>
+    <mapping id="1">
+        <strength>weak</strength>
+        <source>
+            <c:path>roleType</c:path>
+        </source>
+        <expression>
+            <value>
+                <construction>
+                    <resourceRef oid="31237e94-6095-4832-81f1-0821c8e7f911"/>
+                    <kind>entitlement</kind>
+                    <intent>group</intent>
+                </construction>
+            </value>
+        </expression>
+        <target>
+            <c:path>assignment</c:path>
+        </target>
+    </mapping>
+    <mapping id="2">
+        <strength>weak</strength>
+        <source>
+            <c:path>roleType</c:path>
+        </source>
+        <expression>
+            <value>
+                <construction>
+                    <resourceRef oid="31237e94-6095-4832-81f1-0821c8e7f911"/>
+                    <kind>account</kind>
+                    <intent>default</intent>
+                    <association>
+                        <ref xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:res.groups</ref>
+                        <outbound>
+                            <strength>strong</strength>
+                            <expression>
+                                <associationFromLink>
+                                    <projectionDiscriminator>
+                                        <kind>entitlement</kind>
+                                        <intent>group</intent>
+                                    </projectionDiscriminator>
+                                </associationFromLink>
+                            </expression>
+                        </outbound>
+                    </association>
+                </construction>
+            </value>
+        </expression>
+        <target>
+            <c:path>inducement</c:path>
+        </target>
+    </mapping>
+</objectTemplate>

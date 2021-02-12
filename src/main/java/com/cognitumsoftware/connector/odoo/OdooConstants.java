@@ -1,5 +1,8 @@
 package com.cognitumsoftware.connector.odoo;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Odoo related constants for XML-RPC API calls, schema introspection etc.
  */
@@ -49,6 +52,21 @@ public final class OdooConstants {
 
     private OdooConstants() {
         // no instancing
+    }
+
+    // for one2many/many2many write commands see documentation:
+    // https://www.odoo.com/documentation/14.0/reference/orm.html#odoo.models.Model.write
+
+    public static Object getX2ManyWriteCommandReplaceAll(List<Integer> ids) {
+        return Arrays.asList(6, 0, ids);
+    }
+
+    public static Object getX2ManyWriteCommandAddRef(Integer id) {
+        return Arrays.asList(4, id, 0);
+    }
+
+    public static Object getX2ManyWriteCommandRemoveRef(Integer id) {
+        return Arrays.asList(3, id, 0); // doesn't delete referenced record
     }
 
 }

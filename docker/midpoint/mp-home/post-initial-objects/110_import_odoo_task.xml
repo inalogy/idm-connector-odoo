@@ -1,0 +1,39 @@
+<task xmlns="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3"
+      xmlns:org="http://midpoint.evolveum.com/xml/ns/public/common/org-3"
+      xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3"
+      oid="81952083-e53d-4b6e-882d-113c46136ff7" version="17">
+    <name>Import Odoo groups</name>
+    <extension xmlns:mext="http://midpoint.evolveum.com/xml/ns/public/model/extension-3">
+        <mext:objectclass>ri:res.groups</mext:objectclass>
+        <mext:kind>entitlement</mext:kind>
+        <mext:intent>group</mext:intent>
+    </extension>
+    <assignment id="1">
+        <targetRef oid="00000000-0000-0000-0000-000000000503" relation="org:default" type="c:ArchetypeType">
+            <!-- Import task -->
+        </targetRef>
+        <activation>
+            <effectiveStatus>enabled</effectiveStatus>
+        </activation>
+    </assignment>
+    <archetypeRef oid="00000000-0000-0000-0000-000000000503" relation="org:default" type="c:ArchetypeType">
+        <!-- Import task -->
+    </archetypeRef>
+    <roleMembershipRef oid="00000000-0000-0000-0000-000000000503" relation="org:default" type="c:ArchetypeType">
+        <!-- Import task -->
+    </roleMembershipRef>
+    <taskIdentifier>1613119847824-0-1</taskIdentifier>
+    <ownerRef oid="00000000-0000-0000-0000-000000000002" relation="org:default" type="c:UserType">
+        <!-- administrator -->
+    </ownerRef>
+    <channel>http://midpoint.evolveum.com/xml/ns/public/common/channels-3#import</channel>
+    <executionStatus>closed</executionStatus>
+    <category>ImportingAccounts</category>
+    <handlerUri>http://midpoint.evolveum.com/xml/ns/public/model/synchronization/task/import/handler-3</handlerUri>
+    <objectRef oid="31237e94-6095-4832-81f1-0821c8e7f911" relation="org:default" type="c:ResourceType">
+        <!-- odoo-connector-test -->
+    </objectRef>
+    <recurrence>single</recurrence>
+    <binding>loose</binding>
+</task>

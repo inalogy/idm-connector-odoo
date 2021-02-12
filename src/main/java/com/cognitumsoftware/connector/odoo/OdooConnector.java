@@ -2,6 +2,7 @@ package com.cognitumsoftware.connector.odoo;
 
 import com.cognitumsoftware.connector.odoo.schema.OdooField;
 import com.cognitumsoftware.connector.odoo.schema.OdooModel;
+import com.cognitumsoftware.connector.odoo.schema.type.MultiValueOdooType;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
@@ -47,7 +48,7 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
     private OdooSearch searcher;
 
     @Override
-    public Configuration getConfiguration() {
+    public OdooConfiguration getConfiguration() {
         return configuration;
     }
 
@@ -56,7 +57,7 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
         this.configuration = (OdooConfiguration) cfg;
         this.client = new OdooClient(configuration);
         this.cache = new OdooModelCache(client);
-        this.schemaFetcher = new OdooSchema(client);
+        this.schemaFetcher = new OdooSchema(client, configuration);
         this.searcher = new OdooSearch(client);
     }
 
@@ -120,7 +121,13 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
                     val = null;
                 }
                 else if (attr.getValue().size() > 1) {
-                    throw new InvalidAttributeValueException("Multiple attribute values not supported in create operation");
+                    if (field.getType() instanceof MultiValueOdooType) {
+                        val = attr.getValue();
+                    }
+                    else {
+                        throw new InvalidAttributeValueException("Multiple attribute values not supported in create operation for " +
+                                "field '" + field.getName() + "' in model '" + field.getModel().getName() + "'");
+                    }
                 }
                 else {
                     val = attr.getValue().iterator().next();
@@ -157,23 +164,36 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
                     throw new ConnectorException("Did not find odoo field with name '" + delta.getName() + "' in odoo model.");
                 }
 
-                Object val;
                 if (delta.getValuesToReplace() != null) {
-                    if (delta.getValuesToReplace().isEmpty()) {
+                    Object val;
+
+                    if (field.getType() instanceof MultiValueOdooType) {
+                        // multi-value mapped as a whole
+                        val = delta.getValuesToReplace();
+                    }
+                    else if (delta.getValuesToReplace().isEmpty()) {
                         val = null;
                     }
                     else if (delta.getValuesToReplace().size() > 1) {
-                        throw new InvalidAttributeValueException("Multiple attribute values not supported in update operation");
+                        throw new InvalidAttributeValueException("Multiple attribute values not supported in update operation for " +
+                                "field '" + field.getName() + "' in model '" + field.getModel().getName() + "'");
                     }
                     else {
                         val = delta.getValuesToReplace().iterator().next();
                     }
+
+                    fields.put(field.getName(), field.getType().mapToOdooUpdateRecordValue(val));
+                }
+                else if (field.getType() instanceof MultiValueOdooType) {
+                    MultiValueOdooType mv = (MultiValueOdooType) field.getType();
+                    Object val = mv.mapToOdooUpdateRecordDeltaValue(delta.getValuesToAdd(), delta.getValuesToRemove());
+
+                    fields.put(field.getName(), val);
                 }
                 else {
-                    throw new InvalidAttributeValueException("Delta add/remove not supported");
+                    throw new InvalidAttributeValueException("Delta add/remove not supported for field '" + field.getName()
+                            + "' in model '" + field.getModel().getName() + "'");
                 }
-
-                fields.put(field.getName(), field.getType().mapToOdooUpdateRecordValue(val));
             }
 
             // execute update

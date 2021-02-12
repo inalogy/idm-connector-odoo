@@ -58,9 +58,7 @@ dependencies {
         exclude group: 'junit', module: 'junit'
     }
 
-    testImplementation("junit:junit:4.12")
-    testImplementation("net.tirasa.connid:connector-test-common:${connidVersion}")
-    testImplementation("net.tirasa.connid:connector-framework-contract:${connidVersion}")
+    testImplementation("junit:junit:4.13.1")
 }
 
 dockerCompose {

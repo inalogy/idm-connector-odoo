@@ -26,6 +26,7 @@ import org.identityconnectors.framework.common.objects.filter.OrFilter;
 import org.identityconnectors.framework.common.objects.filter.StartsWithFilter;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -81,7 +82,13 @@ public class OdooSearch {
             for (var entry : result.entrySet()) {
                 if (!entry.getKey().equals(MODEL_FIELD_FIELD_NAME_ID) && model.hasField(entry.getKey())) {
                     OdooField modelField = model.getField(entry.getKey());
-                    connObj.addAttribute(entry.getKey(), modelField.getType().mapToConnIdValue(entry.getValue(), modelField));
+                    Object mapped = modelField.getType().mapToConnIdValue(entry.getValue(), modelField);
+                    if (mapped instanceof Collection) { // multi-valued attribute
+                        connObj.addAttribute(entry.getKey(), (Collection<?>) mapped);
+                    }
+                    else {
+                        connObj.addAttribute(entry.getKey(), mapped);
+                    }
                 }
             }
 

@@ -28,9 +28,13 @@ public class OdooSchema {
     private static final Log LOG = Log.getLog(OdooSchema.class);
 
     private OdooClient client;
+    private OdooModelNameMatcher retrieveModelsMatcher;
+    private OdooModelNameMatcher expandModelsMatcher;
 
-    public OdooSchema(OdooClient client) {
+    public OdooSchema(OdooClient client, OdooConfiguration configuration) {
         this.client = client;
+        this.retrieveModelsMatcher = new OdooModelNameMatcher(configuration.getRetrieveModels(), true);
+        this.expandModelsMatcher = new OdooModelNameMatcher(configuration.getExpandModels(), false);
     }
 
     public Schema fetch(Class<? extends Connector> connectorClass) {
@@ -49,9 +53,14 @@ public class OdooSchema {
 
         for (Object modelObj : models) {
             Map<String, Object> model = (Map<String, Object>) modelObj;
+            String modelName = (String) model.get(MODEL_FIELD_MODEL);
+
+            if (!retrieveModelsMatcher.matches(modelName)) {
+                // as per configuration this model is not relevant to the connector user
+                continue;
+            }
 
             ObjectClassInfoBuilder ocib = new ObjectClassInfoBuilder();
-            String modelName = (String) model.get(MODEL_FIELD_MODEL);
             ocib.setType(modelName);
 
             // fetch field infos

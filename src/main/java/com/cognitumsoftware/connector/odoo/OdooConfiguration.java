@@ -8,14 +8,28 @@ import org.identityconnectors.framework.spi.ConfigurationProperty;
 
 import java.util.function.Predicate;
 
+/**
+ * Basic configuration of the connector like connection properties, authentication.
+ */
 public class OdooConfiguration extends AbstractConfiguration {
 
     private String url;
     private String database;
     private String username;
     private GuardedString password;
+    private String retrieveModels;
+    private String expandModels;
 
     public OdooConfiguration() {
+    }
+
+    public OdooConfiguration(OdooConfiguration other) {
+        this.url = other.url;
+        this.database = other.database;
+        this.username = other.username;
+        this.password = other.password;
+        this.retrieveModels = other.retrieveModels;
+        this.expandModels = other.expandModels;
     }
 
     private void required(String fieldName, String field) {
@@ -36,7 +50,12 @@ public class OdooConfiguration extends AbstractConfiguration {
         required("password", password, p -> p != null && !new GuardedString().equals(p));
     }
 
-    @ConfigurationProperty(displayMessageKey = "odoo.config.url", helpMessageKey = "odoo.config.url.help", order = 1, required = true)
+    @ConfigurationProperty(
+            displayMessageKey = "odoo.config.url",
+            helpMessageKey = "odoo.config.url.help",
+            groupMessageKey = "odoo.config.group.basic",
+            order = 1,
+            required = true)
     public String getUrl() {
         return url;
     }
@@ -45,7 +64,12 @@ public class OdooConfiguration extends AbstractConfiguration {
         this.url = StringUtils.removeEnd(url, "/");
     }
 
-    @ConfigurationProperty(displayMessageKey = "odoo.config.database", helpMessageKey = "odoo.config.database.help", order = 2, required = true)
+    @ConfigurationProperty(
+            displayMessageKey = "odoo.config.database",
+            helpMessageKey = "odoo.config.database.help",
+            groupMessageKey = "odoo.config.group.basic",
+            order = 2,
+            required = true)
     public String getDatabase() {
         return database;
     }
@@ -54,7 +78,12 @@ public class OdooConfiguration extends AbstractConfiguration {
         this.database = database;
     }
 
-    @ConfigurationProperty(displayMessageKey = "odoo.config.username", helpMessageKey = "odoo.config.username.help", order = 3, required = true)
+    @ConfigurationProperty(
+            displayMessageKey = "odoo.config.username",
+            helpMessageKey = "odoo.config.username.help",
+            groupMessageKey = "odoo.config.group.basic",
+            order = 3,
+            required = true)
     public String getUsername() {
         return username;
     }
@@ -63,13 +92,45 @@ public class OdooConfiguration extends AbstractConfiguration {
         this.username = username;
     }
 
-    @ConfigurationProperty(displayMessageKey = "odoo.config.password", helpMessageKey = "odoo.config.password.help", order = 4, required = true)
+    @ConfigurationProperty(
+            displayMessageKey = "odoo.config.password",
+            helpMessageKey = "odoo.config.password.help",
+            groupMessageKey = "odoo.config.group.basic",
+            order = 4,
+            required = true,
+            confidential = true)
     public GuardedString getPassword() {
         return password;
     }
 
     public void setPassword(GuardedString password) {
         this.password = password;
+    }
+
+    @ConfigurationProperty(
+            displayMessageKey = "odoo.config.models.retrieve",
+            helpMessageKey = "odoo.config.models.retrieve.help",
+            groupMessageKey = "odoo.config.group.schema",
+            order = 10)
+    public String getRetrieveModels() {
+        return retrieveModels;
+    }
+
+    public void setRetrieveModels(String retrieveModels) {
+        this.retrieveModels = retrieveModels;
+    }
+
+    @ConfigurationProperty(
+            displayMessageKey = "odoo.config.models.expand",
+            helpMessageKey = "odoo.config.models.expand.help",
+            groupMessageKey = "odoo.config.group.schema",
+            order = 10)
+    public String getExpandModels() {
+        return expandModels;
+    }
+
+    public void setExpandModels(String expandModels) {
+        this.expandModels = expandModels;
     }
 
 }
