@@ -2,6 +2,10 @@ package com.cognitumsoftware.connector.odoo.schema.type;
 
 import com.cognitumsoftware.connector.odoo.schema.OdooField;
 
+/**
+ * Maps an odoo relational record field with a target cardinality of 1. The value retrieved from odoo for
+ * such a field is a tuple [id, name] but we only need the ID.
+ */
 public class OdooManyToOneType extends OdooRelationType {
 
     @Override

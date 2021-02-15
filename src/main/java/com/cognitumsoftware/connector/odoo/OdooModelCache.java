@@ -14,6 +14,10 @@ import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
+/**
+ * On-demand retrieval of odoo model and field information. Retrieved info will be cached until cache is evicted.
+ * Connector operations use the {@link OdooModel} to properly map between data types of connId framework and odoo.
+ */
 public class OdooModelCache {
 
     private OdooClient client;

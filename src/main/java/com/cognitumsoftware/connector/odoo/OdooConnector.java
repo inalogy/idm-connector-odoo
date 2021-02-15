@@ -36,6 +36,10 @@ import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
+/**
+ * The odoo connector uses the XML-RPC API of odoo to test connection, retrieve schema and CRUD operations.
+ * See https://www.odoo.com/documentation/14.0/webservices/odoo.html.
+ */
 @ConnectorClass(displayNameKey = "odoo.connector.display", configurationClass = OdooConfiguration.class)
 public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, SearchOp<Filter>, TestOp, SchemaOp, UpdateDeltaOp {
 
@@ -68,21 +72,25 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
 
     @Override
     public void checkAlive() {
-        // for now we don't have a connection
+        // for now we don't have a connection kept alive between XML-RPC calls
     }
 
     @Override
     public void test() {
         client.executeOperation(() -> {
-            Object result = client.getClient().execute(client.getXmlRpcClientConfigCommon(), "version", Collections.emptyList());
+            Object result = client.getXmlRpcClient().execute(client.getXmlRpcClientConfigCommon(), "version", Collections.emptyList());
             LOG.ok("Test connection result: {0}", result);
             return null;
         });
     }
 
+    /**
+     * Additional operation to list all databases available in odoo, primarily for testing. The database name is part of
+     * the connector configuration and used as parameter for most of the XML-RPC calls.
+     */
     public void listDatabases() {
         client.executeOperation(() -> {
-            Object result = client.getClient().execute(client.getXmlRpcClientConfigDb(), "list", Collections.emptyList());
+            Object result = client.getXmlRpcClient().execute(client.getXmlRpcClientConfigDb(), "list", Collections.emptyList());
 
             LOG.ok("Listing database result: {0}", Arrays.toString((Object[]) result));
             return null;
@@ -226,6 +234,7 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
     @Override
     public void executeQuery(ObjectClass objectClass, Filter query, ResultsHandler handler, OperationOptions options) {
         client.executeOperationWithAuthentication(() -> {
+            // delegate search operation
             OdooModel model = cache.getModel(objectClass);
             searcher.search(model, query, handler, options);
             return null;

@@ -23,6 +23,10 @@ import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 
+/**
+ * Fetches the whole odoo model and their field information and translates them into a connId schema.
+ * Depending on configuration, some models are filtered out or expanded, see {@link OdooConfiguration}.
+ */
 public class OdooSchema {
 
     private static final Log LOG = Log.getLog(OdooSchema.class);
@@ -37,6 +41,13 @@ public class OdooSchema {
         this.expandModelsMatcher = new OdooModelNameMatcher(configuration.getExpandModels(), false);
     }
 
+    /**
+     * Calls the XML-RPC API of odoo that provides information about models and their fields, and translates
+     * them into a connId schema.
+     *
+     * @param connectorClass odoo connector class
+     * @return odoo model and fields translated into connId schema
+     */
     public Schema fetch(Class<? extends Connector> connectorClass) {
         return client.executeOperationWithAuthentication(() -> doFetch(connectorClass));
     }
@@ -83,7 +94,7 @@ public class OdooSchema {
                 aib.setReadable(true);
                 aib.setCreateable(true);
                 aib.setUpdateable(true);
-                aib.setReturnedByDefault(false);
+                aib.setReturnedByDefault(false); // only id is returned by default
 
                 String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
                 OdooType mappedType = OdooTypeMapping.map(fieldType);

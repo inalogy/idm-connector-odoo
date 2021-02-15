@@ -11,11 +11,17 @@ import java.util.regex.Pattern;
 
 import static com.cognitumsoftware.connector.odoo.OdooConstants.MODEL_FIELD_FIELD_SELECTION;
 
+/**
+ * Maps the "selection" odoo type that is based on an underlying set. Only those values of the set are valid values
+ * for the field. The set is parsed from the field information.
+ */
 public class OdooSelectionType extends OdooType {
 
     /**
      * Regex pattern to match selection values. Usual format is [('value1', 'label1'), ('value2', 'label2')]
-     * but we do not take ' escaping into account. TODO check escaping
+     * but we do not take ' escaping into account.
+     * <p>
+     * TODO check escaping, undocumented in odoo?
      */
     private static final Pattern VALUES_PATTERN = Pattern.compile("\\('([^']*)', '[^']*'\\)(, )?");
 

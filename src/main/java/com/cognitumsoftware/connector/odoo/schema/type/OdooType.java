@@ -11,6 +11,8 @@ import java.util.Optional;
  * Represents an Odoo type like 'char' or 'binary'. Allows to convert between values from connId framework
  * and odoo XML-RPC values. See also {@link OdooTypeMapping} to retrieve the correct {@link OdooType} for a
  * given odoo type string.
+ * <p>
+ * An {@link OdooType} might implement {@link MultiValueOdooType} to handle delta attribute values properly.
  */
 public abstract class OdooType {
 
@@ -35,6 +37,10 @@ public abstract class OdooType {
      */
     public abstract Class<?> getMappedConnIdType();
 
+    /**
+     * Maps a value of an odoo record field to a value that is understood by connId framework. The mapped value is of type
+     * {@link #getMappedConnIdType()} or a collection of them in case of multi-value attributes.
+     */
     public Object mapToConnIdValue(Object valueFromXmlRpc, OdooField context) {
         if (valueFromXmlRpc == null) {
             return null;
@@ -52,6 +58,12 @@ public abstract class OdooType {
         }
     }
 
+    /**
+     * Allows implementors to customize mapping to connId value.
+     * Default implementation expects the same data type in odoo XML-RPC as in connId.
+     *
+     * @param valueFromXmlRpc not null
+     */
     protected Optional<Object> mapToConnIdValue(Object valueFromXmlRpc) {
         if (getMappedConnIdType().isAssignableFrom(valueFromXmlRpc.getClass())) {
             return Optional.of(valueFromXmlRpc);
@@ -59,20 +71,34 @@ public abstract class OdooType {
         return Optional.empty();
     }
 
+    /**
+     * Maps a connId framework attribute value to a suitable odoo record field value for a create record operation.
+     */
     public Object mapToOdooCreateRecordValue(Object attributeValueFromConnId) {
         return mapToOdooValue(attributeValueFromConnId);
     }
 
+    /**
+     * Same as {@link #mapToOdooCreateRecordValue(Object)} but for update operation.
+     */
     public Object mapToOdooUpdateRecordValue(Object attributeValueFromConnId) {
         return mapToOdooCreateRecordValue(attributeValueFromConnId);
     }
 
+    /**
+     * Maps a connId framework filter value to a suitable odoo record field value for a search operation.
+     * Example: Search a "res.users" record by field "login" that is {@link OdooCharType}. ConnId will supply
+     * a String value which is left untouched by this mapping method because Odoo can handle it as "char".
+     */
     public Object mapToOdooSearchFilterValue(Object attributeValueFromConnId) {
         return mapToOdooValue(attributeValueFromConnId);
     }
 
+    /**
+     * Default implementation for the mapToOdoo*Value methods. Maps null values to {@link Boolean#FALSE}.
+     */
     protected Object mapToOdooValue(Object attributeValueFromConnId) {
-        // mimic null behavior same as odoo returning unset values
+        // mimic null behavior same as odoo returning boolean "false" for unset values
         return Objects.requireNonNullElse(attributeValueFromConnId, Boolean.FALSE);
     }
 

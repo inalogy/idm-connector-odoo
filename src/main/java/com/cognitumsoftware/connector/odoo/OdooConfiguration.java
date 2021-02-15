@@ -9,7 +9,8 @@ import org.identityconnectors.framework.spi.ConfigurationProperty;
 import java.util.function.Predicate;
 
 /**
- * Basic configuration of the connector like connection properties, authentication.
+ * Basic configuration of the connector like connection properties, authentication. See corresponding properties file
+ * in resources folder for details of configuration properties.
  */
 public class OdooConfiguration extends AbstractConfiguration {
 

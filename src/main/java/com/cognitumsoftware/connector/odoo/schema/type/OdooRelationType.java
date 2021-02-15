@@ -1,5 +1,8 @@
 package com.cognitumsoftware.connector.odoo.schema.type;
 
+/**
+ * Base class for relational odoo types.
+ */
 public abstract class OdooRelationType extends OdooType {
 
     @Override

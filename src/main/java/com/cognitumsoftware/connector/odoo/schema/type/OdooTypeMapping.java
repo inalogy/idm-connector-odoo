@@ -20,12 +20,19 @@ public final class OdooTypeMapping {
             Map.entry("many2one", new OdooManyToOneType())
     );
 
+    /**
+     * Singleton for {@link OdooIdType}.
+     */
     public static final OdooType ID_TYPE = new OdooIdType();
 
     private OdooTypeMapping() {
         // no instancing
     }
 
+    /**
+     * Maps an odoo field type ({@link com.cognitumsoftware.connector.odoo.OdooConstants#MODEL_FIELD_FIELD_TYPE} value
+     * to an {@link OdooType} that handles mapping of odoo data to conn ID framework.
+     */
     public static OdooType map(String odooType) {
         return mapping.get(odooType);
     }

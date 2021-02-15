@@ -2,11 +2,17 @@ package com.cognitumsoftware.connector.odoo.schema;
 
 import java.util.Map;
 
+/**
+ * Simple representation of an odoo model as defined in odoo "ir.models".
+ */
 public class OdooModel {
 
     private String name;
     private Map<String, OdooField> fields;
 
+    /**
+     * @return unique name of the model
+     */
     public String getName() {
         return name;
     }
@@ -15,6 +21,9 @@ public class OdooModel {
         this.name = name;
     }
 
+    /**
+     * @return fields contained in the model
+     */
     public Map<String, OdooField> getFields() {
         return fields;
     }

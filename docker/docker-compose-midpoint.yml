@@ -40,9 +40,9 @@ services:
 
 secrets:
   db-idm-secret:
-    file: ./secret_db_idm.txt
+    file: ./secrets/db_idm.txt
   midpoint-keystore:
-    file: ./midpoint_keystore.txt
+    file: ./secrets/midpoint_keystore.txt
 
 volumes:
   pg_idm_data:

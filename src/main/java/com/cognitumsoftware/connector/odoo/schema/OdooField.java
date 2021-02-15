@@ -2,12 +2,18 @@ package com.cognitumsoftware.connector.odoo.schema;
 
 import com.cognitumsoftware.connector.odoo.schema.type.OdooType;
 
+/**
+ * Represents an odoo model's field.
+ */
 public class OdooField {
 
     private String name;
     private OdooType type;
     private OdooModel model;
 
+    /**
+     * @return name of the field
+     */
     public String getName() {
         return name;
     }
@@ -16,6 +22,9 @@ public class OdooField {
         this.name = name;
     }
 
+    /**
+     * @return type of field allowing to handle field values
+     */
     public OdooType getType() {
         return type;
     }
@@ -24,6 +33,9 @@ public class OdooField {
         this.type = type;
     }
 
+    /**
+     * @return the model where the field resides in
+     */
     public OdooModel getModel() {
         return model;
     }

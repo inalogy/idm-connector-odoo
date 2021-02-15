@@ -2,6 +2,10 @@ package com.cognitumsoftware.connector.odoo.schema.type;
 
 import java.util.Optional;
 
+/**
+ * Special {@link OdooType} that maps an integer odoo ID as string for connId (special attributes
+ * {@link org.identityconnectors.framework.common.objects.Uid} and {@link org.identityconnectors.framework.common.objects.Name}).
+ */
 public class OdooIdType extends OdooType {
 
     @Override

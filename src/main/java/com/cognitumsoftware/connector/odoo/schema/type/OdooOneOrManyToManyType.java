@@ -10,6 +10,12 @@ import java.util.Optional;
 
 import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
 
+/**
+ * Special type mapping of an odoo relational record field that has a target cardinality of n.
+ * Writing such a field (create, update) is done by providing "commands", see documentation:
+ * <p>
+ * https://www.odoo.com/documentation/14.0/reference/orm.html?highlight=write#odoo.models.Model.write
+ */
 public class OdooOneOrManyToManyType extends OdooRelationType implements MultiValueOdooType {
 
     @Override

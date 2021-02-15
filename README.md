@@ -12,7 +12,8 @@ The built connector jar file can then be found in folder *./build/libs/*.
 
 ### Using unit test
 
-tbd
+Unit tests require an Odoo instance running. Follow step 1 and 2 of the next paragraph to start an Odoo instance. See ConnectorTest for test
+configuration.
 
 ### Using midpoint
 
@@ -24,7 +25,8 @@ Follow these steps:
     - password: secret
     - email: admin
     - demo data: ✓
-3. start gradle task *testInMidpoint* which builds the connector JAR and invokes *docker/docker-compose-midpoint.yml*
+3. start gradle task *testInMidpoint* which builds the connector JAR and invokes
+   *docker/docker-compose-midpoint.yml*
 4. open http://localhost: and log in with *administrator* and *5ecr3t*
 5. the odoo connector resource is already defined but if you want to add a new resource using the Odoo connector then use parameters:
     - url: http://odoo:8069
@@ -32,10 +34,10 @@ Follow these steps:
     - user name: admin
     - password: secret
 6. test by triggering synchronization manually
-7. when you are finished, type key + ENTER in gradle console to properly shutdown midpoint containers.
+7. when you are finished, type key + ENTER in gradle console to properly stop midpoint containers.
 
-You can skip step 1 and 2 if already done once. Midpoint data will be lost on gradle task restart. Killing gradle process before step 7
-requires manual removing of midpoint docker containers.
+You can skip step 1 and 2 if already done once. Midpoint data will not be lost on gradle task restart. Killing gradle process before step 7
+requires manual stopping of midpoint docker containers.
 
 You can debug the connector using **remote debugging** in your IDE. Port 5005 is exposed from midpoint container for this purpose.
 

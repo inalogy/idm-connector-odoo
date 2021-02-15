@@ -19,15 +19,17 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * Encapsulates the XML-RPC client to communicate with odoo. Also handles authentication to the API automatically.
+ */
 public class OdooClient {
 
-    protected OdooConfiguration configuration;
-    protected XmlRpcClient client;
-    protected Integer authenticationToken;
+    private OdooConfiguration configuration;
+    private XmlRpcClient client;
+    private Integer authenticationToken;
 
-    protected XmlRpcClientConfig xmlRpcClientConfigCommon;
-    protected XmlRpcClientConfig xmlRpcClientConfigObject;
-    protected XmlRpcClientConfig xmlRpcClientConfigDb;
+    private XmlRpcClientConfig xmlRpcClientConfigCommon;
+    private XmlRpcClientConfig xmlRpcClientConfigDb;
 
     public OdooClient(OdooConfiguration configuration) {
         this.configuration = configuration;
@@ -35,10 +37,10 @@ public class OdooClient {
         this.authenticationToken = null;
 
         this.xmlRpcClientConfigCommon = createXmlRpcClientConfig("/xmlrpc/2/common");
-        this.xmlRpcClientConfigObject = createXmlRpcClientConfig("/xmlrpc/2/object");
         this.xmlRpcClientConfigDb = createXmlRpcClientConfig("/xmlrpc/2/db");
 
         // set a default of XML-RPC client configuration that fits most cases
+        XmlRpcClientConfig xmlRpcClientConfigObject = createXmlRpcClientConfig("/xmlrpc/2/object");
         client.setConfig(xmlRpcClientConfigObject);
     }
 
@@ -61,14 +63,14 @@ public class OdooClient {
         return xmlRpcClientConfigDb;
     }
 
-    public XmlRpcClient getClient() {
+    public XmlRpcClient getXmlRpcClient() {
         return client;
     }
 
     /**
      * Same as executeOperation but authenticates to odoo first if not already done.
      */
-    public <T> T executeOperationWithAuthentication(ConnectorOp<T> operation) {
+    public <T> T executeOperationWithAuthentication(XmlRpcOp<T> operation) {
         return executeOperation(() -> {
             if (authenticationToken == null) {
                 GuardedStringAccessor accessorSecret = new GuardedStringAccessor();
@@ -93,7 +95,7 @@ public class OdooClient {
      *
      * @param <T> return type of operation
      */
-    public <T> T executeOperation(ConnectorOp<T> operation) {
+    public <T> T executeOperation(XmlRpcOp<T> operation) {
         try {
             return operation.execute();
         }
@@ -127,8 +129,14 @@ public class OdooClient {
         return executeOperation(() -> client.execute("execute_kw", params));
     }
 
+    /**
+     * Functional interface for an operation performed in Odoo using its XML-RPC API. Mainly defined to handle the
+     * {@link XmlRpcException}s.
+     *
+     * @param <T> return type of the operation
+     */
     @FunctionalInterface
-    protected interface ConnectorOp<T> {
+    protected interface XmlRpcOp<T> {
 
         T execute() throws XmlRpcException;
 

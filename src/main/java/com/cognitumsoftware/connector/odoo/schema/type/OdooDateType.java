@@ -9,6 +9,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
 
+/**
+ * Similar to {@link OdooDateTimeType} but for date component only. The time component is cut off from the date/time
+ * provided by connId.
+ */
 public class OdooDateType extends OdooType {
 
     private String format;

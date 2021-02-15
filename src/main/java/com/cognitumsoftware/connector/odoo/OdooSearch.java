@@ -39,6 +39,9 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 
+/**
+ * Performs a search query against odoo XML-RPC API.
+ */
 public class OdooSearch {
 
     private static Map<Class<? extends AttributeFilter>, String> attributeFilterClassToOperatorMap = Map.of(
@@ -61,6 +64,10 @@ public class OdooSearch {
         this.client = client;
     }
 
+    /**
+     * Performs a search in odoo on records of the given model.
+     * Parameters as in {@link org.identityconnectors.framework.spi.operations.SearchOp}.
+     */
     public void search(OdooModel model, Filter query, ResultsHandler handler, OperationOptions options) {
         // prepare
         Map<String, Object> params = prepareQueryParameters(options);

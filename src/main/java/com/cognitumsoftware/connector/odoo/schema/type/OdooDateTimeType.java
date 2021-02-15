@@ -9,6 +9,10 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Optional;
 
+/**
+ * Maps between the {@link ZonedDateTime} used by connId framework for date/time attribute values and the
+ * format used by odoo. As the odoo format is without time zone, we assume the system default time zone.
+ */
 public class OdooDateTimeType extends OdooType {
 
     private String format;
