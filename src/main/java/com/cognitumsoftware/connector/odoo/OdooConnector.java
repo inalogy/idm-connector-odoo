@@ -1,14 +1,9 @@
 package com.cognitumsoftware.connector.odoo;
 
-import com.cognitumsoftware.connector.odoo.schema.OdooField;
 import com.cognitumsoftware.connector.odoo.schema.OdooModel;
-import com.cognitumsoftware.connector.odoo.schema.type.MultiValueOdooType;
 import org.identityconnectors.common.logging.Log;
-import org.identityconnectors.framework.common.exceptions.ConnectorException;
-import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeDelta;
-import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
@@ -26,19 +21,18 @@ import org.identityconnectors.framework.spi.operations.SearchOp;
 import org.identityconnectors.framework.spi.operations.TestOp;
 import org.identityconnectors.framework.spi.operations.UpdateDeltaOp;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Set;
 
-import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
-import static java.util.Arrays.asList;
+import static com.cognitumsoftware.connector.odoo.OdooConstants.OPERATION_DELETE;
 import static java.util.Collections.singletonList;
 
 /**
  * The odoo connector uses the XML-RPC API of odoo to test connection, retrieve schema and CRUD operations.
  * See https://www.odoo.com/documentation/14.0/webservices/odoo.html.
+ * <p>
+ * This connector is NOT thread-safe which is assumed by connector framework according to connector implementation guide:
+ * https://docs.evolveum.com/connectors/connid/1.x/connector-development-guide/
  */
 @ConnectorClass(displayNameKey = "odoo.connector.display", configurationClass = OdooConfiguration.class)
 public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, SearchOp<Filter>, TestOp, SchemaOp, UpdateDeltaOp {
@@ -50,6 +44,7 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
     private OdooModelCache cache;
     private OdooSchema schemaFetcher;
     private OdooSearch searcher;
+    private OdooWrite writer;
 
     @Override
     public OdooConfiguration getConfiguration() {
@@ -62,7 +57,8 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
         this.client = new OdooClient(configuration);
         this.cache = new OdooModelCache(client);
         this.schemaFetcher = new OdooSchema(client, configuration);
-        this.searcher = new OdooSearch(client);
+        this.searcher = new OdooSearch(client, cache);
+        this.writer = new OdooWrite(client, cache);
     }
 
     @Override
@@ -84,19 +80,6 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
         });
     }
 
-    /**
-     * Additional operation to list all databases available in odoo, primarily for testing. The database name is part of
-     * the connector configuration and used as parameter for most of the XML-RPC calls.
-     */
-    public void listDatabases() {
-        client.executeOperation(() -> {
-            Object result = client.getXmlRpcClient().execute(client.getXmlRpcClientConfigDb(), "list", Collections.emptyList());
-
-            LOG.ok("Listing database result: {0}", Arrays.toString((Object[]) result));
-            return null;
-        });
-    }
-
     @Override
     public Schema schema() {
         cache.evict(); // when someone resolves the schema (again), it might have changed, so clear current cache
@@ -108,45 +91,9 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
     @Override
     public Uid create(ObjectClass objectClass, Set<Attribute> createAttributes, OperationOptions options) {
         return client.executeOperationWithAuthentication(() -> {
-            // prepare
+            // delegate to writer
             OdooModel model = cache.getModel(objectClass);
-
-            Map<String, Object> fields = new HashMap<>();
-
-            for (Attribute attr : createAttributes) {
-                if (attr.getName().equals(Uid.NAME) || attr.getName().equals(Name.NAME)) {
-                    // we ignore these attributes as they are the ID of the record to be created in odoo
-                    continue;
-                }
-
-                OdooField field = model.getField(attr.getName());
-                if (field == null) {
-                    throw new ConnectorException("Did not find odoo field with name '" + attr.getName() + "' in odoo model.");
-                }
-
-                Object val;
-                if (attr.getValue() == null || attr.getValue().isEmpty()) {
-                    val = null;
-                }
-                else if (attr.getValue().size() > 1) {
-                    if (field.getType() instanceof MultiValueOdooType) {
-                        val = attr.getValue();
-                    }
-                    else {
-                        throw new InvalidAttributeValueException("Multiple attribute values not supported in create operation for " +
-                                "field '" + field.getName() + "' in model '" + field.getModel().getName() + "'");
-                    }
-                }
-                else {
-                    val = attr.getValue().iterator().next();
-                }
-
-                fields.put(field.getName(), field.getType().mapToOdooCreateRecordValue(val));
-            }
-
-            // execute create
-            Integer id = (Integer) client.executeXmlRpc(model.getName(), OPERATION_CREATE, singletonList(fields));
-            return new Uid(id.toString());
+            return writer.createRecord(model, createAttributes);
         });
     }
 
@@ -154,62 +101,11 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
     public Set<AttributeDelta> updateDelta(ObjectClass objectClass, Uid uid, Set<AttributeDelta> attributeDeltas,
             OperationOptions operationOptions) {
 
-        client.executeOperationWithAuthentication(() -> {
-            // prepare
+        return client.executeOperationWithAuthentication(() -> {
+            // delegate to writer
             OdooModel model = cache.getModel(objectClass);
-            Integer id = Integer.valueOf(uid.getUidValue());
-
-            Map<String, Object> fields = new HashMap<>();
-
-            for (AttributeDelta delta : attributeDeltas) {
-                if (delta.getName().equals(Uid.NAME) || delta.getName().equals(Name.NAME)) {
-                    // we ignore these attributes as they are the ID of the record to be updated in odoo
-                    continue;
-                }
-
-                OdooField field = model.getField(delta.getName());
-                if (field == null) {
-                    throw new ConnectorException("Did not find odoo field with name '" + delta.getName() + "' in odoo model.");
-                }
-
-                if (delta.getValuesToReplace() != null) {
-                    Object val;
-
-                    if (field.getType() instanceof MultiValueOdooType) {
-                        // multi-value mapped as a whole
-                        val = delta.getValuesToReplace();
-                    }
-                    else if (delta.getValuesToReplace().isEmpty()) {
-                        val = null;
-                    }
-                    else if (delta.getValuesToReplace().size() > 1) {
-                        throw new InvalidAttributeValueException("Multiple attribute values not supported in update operation for " +
-                                "field '" + field.getName() + "' in model '" + field.getModel().getName() + "'");
-                    }
-                    else {
-                        val = delta.getValuesToReplace().iterator().next();
-                    }
-
-                    fields.put(field.getName(), field.getType().mapToOdooUpdateRecordValue(val));
-                }
-                else if (field.getType() instanceof MultiValueOdooType) {
-                    MultiValueOdooType mv = (MultiValueOdooType) field.getType();
-                    Object val = mv.mapToOdooUpdateRecordDeltaValue(delta.getValuesToAdd(), delta.getValuesToRemove());
-
-                    fields.put(field.getName(), val);
-                }
-                else {
-                    throw new InvalidAttributeValueException("Delta add/remove not supported for field '" + field.getName()
-                            + "' in model '" + field.getModel().getName() + "'");
-                }
-            }
-
-            // execute update
-            client.executeXmlRpc(model.getName(), OPERATION_UPDATE, asList(singletonList(id), fields));
-            return null;
+            return writer.updateRecord(model, uid, attributeDeltas);
         });
-
-        return Collections.emptySet();
     }
 
     @Override
@@ -218,6 +114,8 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
             // prepare
             OdooModel model = cache.getModel(objectClass);
             Integer id = Integer.valueOf(uid.getUidValue());
+
+            // NOTE: we do not care about related records, these must be handled by odoo
 
             // execute delete
             client.executeXmlRpc(model.getName(), OPERATION_DELETE, singletonList(singletonList(id)));

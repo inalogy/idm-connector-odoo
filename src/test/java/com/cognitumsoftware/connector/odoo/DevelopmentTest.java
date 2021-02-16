@@ -1,25 +1,18 @@
 package com.cognitumsoftware.connector.odoo;
 
 import org.identityconnectors.common.security.GuardedString;
-import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.AttributeBuilder;
-import org.identityconnectors.framework.common.objects.AttributeDelta;
-import org.identityconnectors.framework.common.objects.AttributeDeltaBuilder;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.Schema;
 import org.identityconnectors.framework.common.objects.SortKey;
-import org.identityconnectors.framework.common.objects.Uid;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import static com.cognitumsoftware.connector.odoo.OdooConstants.*;
 import static java.util.Arrays.asList;
@@ -27,7 +20,9 @@ import static java.util.Collections.singletonList;
 
 /**
  * Not really unit tests, just for coding purpose.
+ * They need to be transformed into real tests with assertions, finally.
  */
+@Ignore
 public class DevelopmentTest {
 
     private OdooConnector connector;
@@ -43,14 +38,9 @@ public class DevelopmentTest {
     }
 
     @Test
-    public void testListDatabases() {
-        connector.listDatabases();
-    }
-
-    @Test
     public void testSchemaRetrieval() {
         Schema s = connector.schema();
-        s.getObjectClassInfo().stream().filter(oci -> oci.getType().equals("res.partner")).forEach(oci -> {
+        s.getObjectClassInfo().stream().filter(oci -> oci.getType().equals("res.users")).forEach(oci -> {
             System.out.println("----------------------------------");
             System.out.println(oci.getType());
 
@@ -70,7 +60,7 @@ public class DevelopmentTest {
     @Test
     public void dumpModel() {
         OdooClient client = new OdooClient(connector.getConfiguration());
-        String modelName = "res.groups";
+        String modelName = "res.users";
 
         client.executeOperationWithAuthentication(() -> {
             Object[] models = (Object[]) client.executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ,
@@ -84,6 +74,13 @@ public class DevelopmentTest {
 
             Object[] fieldIds = (Object[]) model.get(MODEL_FIELD_FIELD_IDS);
             Object[] fields = (Object[]) client.executeXmlRpc(MODEL_NAME_MODEL_FIELDS, OPERATION_READ, singletonList(asList(fieldIds)));
+
+            System.out.println("----------- Fields Overview ------------");
+            for (var fieldObj : fields) {
+                Map<String, Object> field = (Map<String, Object>) fieldObj;
+                System.out.println("Field " + field.get(MODEL_FIELD_FIELD_NAME) + ": ttype=" + field.get(MODEL_FIELD_FIELD_TYPE)
+                        + ", required=" + field.get(MODEL_FIELD_FIELD_REQUIRED) + ", related=" + field.get("related"));
+            }
 
             System.out.println("----------- Fields ------------");
 
@@ -124,60 +121,6 @@ public class DevelopmentTest {
         connector.executeQuery(oc, filter.isEmpty() ? null : filter.iterator().next(), rc, oo);
 
         rc.getConnectorObjects().forEach(System.out::println);
-    }
-
-    @Test
-    public void testCreateAndUpdate() {
-        ObjectClass oc = new ObjectClass("res.users");
-        OperationOptions oo = new OperationOptionsBuilder().build();
-
-        Set<Attribute> attrs = new HashSet<>();
-        //attrs.add(AttributeBuilder.build("login", "testcreate"));
-        attrs.add(AttributeBuilder.build("name", "Create Test"));
-        attrs.add(AttributeBuilder.build("email", "my@test.com"));
-        attrs.add(AttributeBuilder.build("signature", "sig1"));
-
-        Uid uid = connector.create(oc, attrs, oo);
-        System.out.println("Uid: " + uid);
-
-        Set<AttributeDelta> ch = new HashSet<>();
-        ch.add(AttributeDeltaBuilder.build("login", "demo"));
-        ch.add(AttributeDeltaBuilder.build("signature", Collections.emptyList()));
-
-        connector.updateDelta(oc, uid, ch, oo);
-    }
-
-    @Test
-    public void testDelete() {
-        ObjectClass oc = new ObjectClass("res.users");
-        OperationOptions oo = new OperationOptionsBuilder().build();
-
-        connector.delete(oc, new Uid("8"), oo);
-    }
-
-    @Test
-    public void testUpdateRelationWithReplaceAll() {
-        Uid uid = new Uid("27");
-        ObjectClass oc = new ObjectClass("res.users");
-        OperationOptions oo = new OperationOptionsBuilder().build();
-
-        Set<AttributeDelta> ch = new HashSet<>();
-        ch.add(AttributeDeltaBuilder.build("groups_id", 6, 3));
-
-        connector.updateDelta(oc, uid, ch, oo);
-    }
-
-    @Test
-    public void testUpdateRelationWithDelta() {
-        Uid uid = new Uid("27");
-        ObjectClass oc = new ObjectClass("res.users");
-        OperationOptions oo = new OperationOptionsBuilder().build();
-
-        Set<AttributeDelta> ch = new HashSet<>();
-        ch.add(new AttributeDeltaBuilder().setName("groups_id").addValueToRemove(6).build());
-        //ch.add(new AttributeDeltaBuilder().setName("groups_id").addValueToAdd(3).build());
-
-        connector.updateDelta(oc, uid, ch, oo);
     }
 
 }

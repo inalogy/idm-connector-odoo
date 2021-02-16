@@ -29,19 +29,15 @@ public class OdooClient {
     private Integer authenticationToken;
 
     private XmlRpcClientConfig xmlRpcClientConfigCommon;
-    private XmlRpcClientConfig xmlRpcClientConfigDb;
 
     public OdooClient(OdooConfiguration configuration) {
         this.configuration = configuration;
         this.client = new XmlRpcClient();
         this.authenticationToken = null;
-
-        this.xmlRpcClientConfigCommon = createXmlRpcClientConfig("/xmlrpc/2/common");
-        this.xmlRpcClientConfigDb = createXmlRpcClientConfig("/xmlrpc/2/db");
+        this.xmlRpcClientConfigCommon = createXmlRpcClientConfig(OdooConstants.XMLRPC_COMMON);
 
         // set a default of XML-RPC client configuration that fits most cases
-        XmlRpcClientConfig xmlRpcClientConfigObject = createXmlRpcClientConfig("/xmlrpc/2/object");
-        client.setConfig(xmlRpcClientConfigObject);
+        client.setConfig(createXmlRpcClientConfig(OdooConstants.XMLRPC_OBJECT));
     }
 
     private XmlRpcClientConfig createXmlRpcClientConfig(String path) {
@@ -57,10 +53,6 @@ public class OdooClient {
 
     public XmlRpcClientConfig getXmlRpcClientConfigCommon() {
         return xmlRpcClientConfigCommon;
-    }
-
-    public XmlRpcClientConfig getXmlRpcClientConfigDb() {
-        return xmlRpcClientConfigDb;
     }
 
     public XmlRpcClient getXmlRpcClient() {

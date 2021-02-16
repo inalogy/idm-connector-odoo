@@ -8,6 +8,9 @@ import java.util.List;
  */
 public final class OdooConstants {
 
+    public final static String XMLRPC_COMMON = "/xmlrpc/2/common";
+    public final static String XMLRPC_OBJECT = "/xmlrpc/2/object";
+
     public final static String MODEL_NAME_MODELS = "ir.model";
     public final static String MODEL_NAME_MODEL_FIELDS = "ir.model.fields";
 
@@ -22,6 +25,7 @@ public final class OdooConstants {
     public final static String MODEL_FIELD_FIELD_STORE = "store"; // false means not stored in database but computed
     public final static String MODEL_FIELD_FIELD_SELECTION = "selection";
     public final static String MODEL_FIELD_FIELD_SELECTION_ADD = "selection_add";
+    public final static String MODEL_FIELD_FIELD_MANY2ONE_RELATED_MODEL = "relation";
 
     public final static String OPERATION_SEARCH_READ = "search_read";
     public final static String OPERATION_READ = "read";

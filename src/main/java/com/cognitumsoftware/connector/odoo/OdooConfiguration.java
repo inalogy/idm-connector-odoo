@@ -19,7 +19,7 @@ public class OdooConfiguration extends AbstractConfiguration {
     private String username;
     private GuardedString password;
     private String retrieveModels;
-    private String expandModels;
+    private String expandRelations;
 
     public OdooConfiguration() {
     }
@@ -30,11 +30,11 @@ public class OdooConfiguration extends AbstractConfiguration {
         this.username = other.username;
         this.password = other.password;
         this.retrieveModels = other.retrieveModels;
-        this.expandModels = other.expandModels;
+        this.expandRelations = other.expandRelations;
     }
 
     private void required(String fieldName, String field) {
-        required(fieldName, field, StringUtils::isNoneEmpty);
+        required(fieldName, field, StringUtils::isNotEmpty);
     }
 
     private <T> void required(String fieldName, T field, Predicate<T> presentTester) {
@@ -125,13 +125,13 @@ public class OdooConfiguration extends AbstractConfiguration {
             displayMessageKey = "odoo.config.models.expand",
             helpMessageKey = "odoo.config.models.expand.help",
             groupMessageKey = "odoo.config.group.schema",
-            order = 10)
-    public String getExpandModels() {
-        return expandModels;
+            order = 15)
+    public String getExpandRelations() {
+        return expandRelations;
     }
 
-    public void setExpandModels(String expandModels) {
-        this.expandModels = expandModels;
+    public void setExpandRelations(String expandRelations) {
+        this.expandRelations = expandRelations;
     }
 
 }

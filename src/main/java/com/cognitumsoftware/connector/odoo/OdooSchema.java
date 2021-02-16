@@ -1,8 +1,10 @@
 package com.cognitumsoftware.connector.odoo;
 
+import com.cognitumsoftware.connector.odoo.schema.type.OdooManyToOneType;
 import com.cognitumsoftware.connector.odoo.schema.type.OdooType;
 import com.cognitumsoftware.connector.odoo.schema.type.OdooTypeMapping;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
 import org.identityconnectors.framework.common.objects.AttributeInfoBuilder;
 import org.identityconnectors.framework.common.objects.Name;
@@ -14,8 +16,10 @@ import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.spi.Connector;
 import org.identityconnectors.framework.spi.operations.SearchOp;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.Set;
 
@@ -33,12 +37,12 @@ public class OdooSchema {
 
     private OdooClient client;
     private OdooModelNameMatcher retrieveModelsMatcher;
-    private OdooModelNameMatcher expandModelsMatcher;
+    private OdooModelNameMatcher expandRelationsMatcher;
 
     public OdooSchema(OdooClient client, OdooConfiguration configuration) {
         this.client = client;
         this.retrieveModelsMatcher = new OdooModelNameMatcher(configuration.getRetrieveModels(), true);
-        this.expandModelsMatcher = new OdooModelNameMatcher(configuration.getExpandModels(), false);
+        this.expandRelationsMatcher = new OdooModelNameMatcher(configuration.getExpandRelations(), false);
     }
 
     /**
@@ -80,40 +84,7 @@ public class OdooSchema {
 
             for (Object fieldObj : fields) {
                 Map<String, Object> field = (Map<String, Object>) fieldObj;
-
-                AttributeInfoBuilder aib = new AttributeInfoBuilder();
-
-                String fieldName = (String) field.get(MODEL_FIELD_FIELD_NAME);
-                if (fieldName.equals(MODEL_FIELD_FIELD_NAME_ID)) {
-                    // special handling of ID attribute, see below
-                    continue;
-                }
-
-                aib.setName(fieldName);
-                aib.setRequired((Boolean) field.get(MODEL_FIELD_FIELD_REQUIRED));
-                aib.setReadable(true);
-                aib.setCreateable(true);
-                aib.setUpdateable(true);
-                aib.setReturnedByDefault(false); // only id is returned by default
-
-                String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
-                OdooType mappedType = OdooTypeMapping.map(fieldType);
-                if (mappedType == null) {
-                    if (!unmappedTypes.contains(fieldType)) {
-                        LOG.warn("Unable to map odoo type ''{0}'' to connId type, ignoring field ''{1}''", fieldType, fieldName);
-                        unmappedTypes.add(fieldType);
-                    }
-                    LOG.ok("Skipping field ''{0}'' with unmapped type={1} and details={2}", fieldName, fieldType, field);
-                    continue;
-                }
-                mappedType = mappedType.refine(modelName, fieldName, field);
-                if (mappedType == null) {
-                    LOG.ok("Skipping field ''{0}'' with unrefined type={1} and details={2}", fieldName, fieldType, field);
-                    continue;
-                }
-                aib.setType(mappedType.getMappedConnIdType());
-
-                ocib.addAttributeInfo(aib.build());
+                ocib.addAllAttributeInfo(buildFieldSchema(modelName, "", field, unmappedTypes));
             }
 
             ocib.addAttributeInfo(buildIdAttribute(Uid.NAME));
@@ -136,6 +107,82 @@ public class OdooSchema {
         LOG.ok("---- Fetching schema end ----");
 
         return sb.build();
+    }
+
+    private Collection<AttributeInfo> buildFieldSchema(String modelName, String fieldPath, Map<String, Object> field,
+            Set<String> unmappedTypes) {
+
+        Collection<AttributeInfo> result = new LinkedList<>();
+
+        String fieldName = (String) field.get(MODEL_FIELD_FIELD_NAME);
+        if (fieldName.equals(MODEL_FIELD_FIELD_NAME_ID)) {
+            // special handling of ID attribute, see Uid and Name attribute
+            return Collections.emptyList();
+        }
+
+        AttributeInfoBuilder aib = new AttributeInfoBuilder();
+        aib.setName(fieldPath + (fieldPath.isEmpty() ? "" : Constants.MODEL_FIELD_SEPARATOR) + fieldName);
+        aib.setRequired((Boolean) field.get(MODEL_FIELD_FIELD_REQUIRED));
+        aib.setReadable(true);
+        aib.setCreateable(true);
+        aib.setUpdateable(true);
+        aib.setReturnedByDefault(false); // only id is returned by default
+
+        String fieldType = (String) field.get(MODEL_FIELD_FIELD_TYPE);
+        OdooType mappedType = OdooTypeMapping.map(fieldType);
+        if (mappedType == null) {
+            if (!unmappedTypes.contains(fieldType)) {
+                LOG.warn("Unable to map odoo type ''{0}'' to connId type, ignoring field ''{1}''", fieldType, fieldName);
+                unmappedTypes.add(fieldType);
+            }
+            LOG.ok("Skipping field ''{0}'' with unmapped type={1} and details={2}", fieldName, fieldType, field);
+            return Collections.emptyList();
+        }
+        mappedType = mappedType.refine(modelName, fieldName, field);
+        if (mappedType == null) {
+            LOG.ok("Skipping field ''{0}'' with unrefined type={1} and details={2}", fieldName, fieldType, field);
+            return Collections.emptyList();
+        }
+        aib.setType(mappedType.getMappedConnIdType());
+
+        result.add(aib.build());
+
+        // do we need to expand this field? only expand one level (no recursion for now)
+        if (fieldPath.isEmpty()) {
+            String relationPath = modelName + Constants.MODEL_FIELD_SEPARATOR + field.get(MODEL_FIELD_FIELD_NAME);
+            if (expandRelationsMatcher.matches(relationPath) && mappedType instanceof OdooManyToOneType) {
+                result.addAll(expandField(field, unmappedTypes));
+            }
+        }
+
+        return result;
+    }
+
+    private Collection<AttributeInfo> expandField(Map<String, Object> field, Set<String> unmappedTypes) {
+        Collection<AttributeInfo> result = new LinkedList<>();
+        String relatedModel = (String) field.get(OdooConstants.MODEL_FIELD_FIELD_MANY2ONE_RELATED_MODEL);
+
+        // retrieve model info
+        Object[] models = (Object[]) client.executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ,
+                singletonList(singletonList(asList(MODEL_FIELD_MODEL, OPERATOR_EQUALS, relatedModel))),
+                Map.of(OPERATION_PARAMETER_FIELDS, asList(MODEL_FIELD_MODEL, MODEL_FIELD_FIELD_IDS)));
+
+        if (models.length != 1) {
+            throw new ConnectorException("Unable to retrieve odoo model '" + relatedModel + "'");
+        }
+
+        Map<String, Object> model = (Map<String, Object>) models[0];
+
+        // retrieve fields info
+        Object[] fieldIds = (Object[]) model.get(MODEL_FIELD_FIELD_IDS);
+        Object[] fields = (Object[]) client.executeXmlRpc(MODEL_NAME_MODEL_FIELDS, OPERATION_READ, singletonList(asList(fieldIds)));
+
+        for (Object fieldObj : fields) {
+            Map<String, Object> relatedField = (Map<String, Object>) fieldObj;
+            result.addAll(buildFieldSchema(relatedModel, (String) field.get(MODEL_FIELD_FIELD_NAME), relatedField, unmappedTypes));
+        }
+
+        return result;
     }
 
     private AttributeInfo buildIdAttribute(String name) {

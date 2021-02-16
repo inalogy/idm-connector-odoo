@@ -3,6 +3,7 @@ package com.cognitumsoftware.connector.odoo;
 import org.apache.commons.lang3.StringUtils;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -16,7 +17,8 @@ public class OdooModelNameMatcher {
     private boolean alwaysMatchEmptyPatterns;
 
     public OdooModelNameMatcher(String patternList, boolean alwaysMatchEmptyPatterns) {
-        this.patterns = Arrays.asList(StringUtils.defaultString(patternList).trim().split("\\s*,\\s*"));
+        String patternTrimmed = StringUtils.defaultString(patternList).trim();
+        this.patterns = patternTrimmed.isEmpty() ? Collections.emptyList() : Arrays.asList(patternTrimmed.split("\\s*,\\s*"));
         this.alwaysMatchEmptyPatterns = alwaysMatchEmptyPatterns;
     }
 
