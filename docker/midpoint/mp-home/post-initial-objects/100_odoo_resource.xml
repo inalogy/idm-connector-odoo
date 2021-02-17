@@ -42,13 +42,11 @@
     </connectorConfiguration>
     <schema>
         <cachingMetadata>
-            <retrievalTimestamp>2021-02-16T16:06:30.764Z</retrievalTimestamp>
-            <serialNumber>c18f4cf7522fc80c-7aadad60443844d8</serialNumber>
+            <retrievalTimestamp>2021-02-17T14:04:39.092Z</retrievalTimestamp>
+            <serialNumber>3bb07e4916582935-bcde60112e506e35</serialNumber>
         </cachingMetadata>
         <definition>
-            <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:a="http://prism.evolveum.com/xml/ns/public/annotation-3"
-                        xmlns:ra="http://midpoint.evolveum.com/xml/ns/public/resource/annotation-3"
-                        elementFormDefault="qualified" targetNamespace="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
+            <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:a="http://prism.evolveum.com/xml/ns/public/annotation-3" xmlns:ra="http://midpoint.evolveum.com/xml/ns/public/resource/annotation-3" xmlns:tns="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3" elementFormDefault="qualified" targetNamespace="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">
                 <xsd:import namespace="http://prism.evolveum.com/xml/ns/public/annotation-3"/>
                 <xsd:import namespace="http://midpoint.evolveum.com/xml/ns/public/resource/annotation-3"/>
                 <xsd:complexType name="res.partner">
@@ -56,10 +54,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.partner</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -963,10 +959,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.users.identitycheck</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -1060,10 +1054,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.company</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -1508,10 +1500,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.users.apikeys.description</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -1596,10 +1586,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.currency.rate</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -1711,10 +1699,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.job</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -2015,10 +2001,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.config.installer</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -2094,10 +2078,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.plan.activity.type</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -2218,10 +2200,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.plan</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -2324,10 +2304,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.employee.public</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -2682,10 +2660,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.config</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -2761,10 +2737,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.partner.category</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -2903,10 +2877,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.bank</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -3081,10 +3053,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.country</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -3277,10 +3247,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.lang</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -3482,10 +3450,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.users.apikeys.show</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -3534,10 +3500,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.plan.wizard</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -3631,10 +3595,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.employee.base</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -3881,10 +3843,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.department</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -4185,10 +4145,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.currency</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -4363,10 +4321,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.country.group</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -4460,10 +4416,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.partner.industry</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -4566,10 +4520,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.groups</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -4762,10 +4714,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.partner.title</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -4859,10 +4809,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.partner.bank</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -5046,10 +4994,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.employee.category</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -5152,10 +5098,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.users</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -7589,10 +7533,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.country.state</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -7695,10 +7637,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.partner.autocomplete.sync</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -7792,10 +7732,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.config.settings</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -8303,10 +8241,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.users.apikeys</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -8382,10 +8318,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.departure.wizard</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -8506,10 +8440,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>hr.employee</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
@@ -10916,10 +10848,8 @@
                         <xsd:appinfo>
                             <ra:resourceObject/>
                             <ra:identifier xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:identifier>
-                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:displayNameAttribute>
-                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id
-                            </ra:namingAttribute>
+                            <ra:displayNameAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:displayNameAttribute>
+                            <ra:namingAttribute xmlns:ri="http://midpoint.evolveum.com/xml/ns/public/resource/instance-3">ri:id</ra:namingAttribute>
                             <ra:nativeObjectClass>res.users.log</ra:nativeObjectClass>
                         </xsd:appinfo>
                     </xsd:annotation>
