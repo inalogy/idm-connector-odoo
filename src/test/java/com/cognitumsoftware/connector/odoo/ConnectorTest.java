@@ -13,14 +13,31 @@ import org.identityconnectors.framework.common.objects.ObjectClassInfo;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.Schema;
+import org.identityconnectors.framework.common.objects.SortKey;
 import org.identityconnectors.framework.common.objects.Uid;
+import org.identityconnectors.framework.common.objects.filter.AndFilter;
+import org.identityconnectors.framework.common.objects.filter.ContainsFilter;
+import org.identityconnectors.framework.common.objects.filter.EndsWithFilter;
 import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
+import org.identityconnectors.framework.common.objects.filter.Filter;
+import org.identityconnectors.framework.common.objects.filter.GreaterThanFilter;
+import org.identityconnectors.framework.common.objects.filter.GreaterThanOrEqualFilter;
+import org.identityconnectors.framework.common.objects.filter.LessThanFilter;
+import org.identityconnectors.framework.common.objects.filter.LessThanOrEqualFilter;
+import org.identityconnectors.framework.common.objects.filter.NotFilter;
+import org.identityconnectors.framework.common.objects.filter.OrFilter;
+import org.identityconnectors.framework.common.objects.filter.StartsWithFilter;
 import org.junit.Test;
 
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import static com.cognitumsoftware.connector.odoo.Constants.MODEL_FIELD_SEPARATOR;
@@ -318,16 +335,35 @@ public class ConnectorTest {
 
     @Test
     public void testUpdateRelationWithDelta() {
-        // TODO:
-        Uid uid = new Uid("27");
         ObjectClass oc = new ObjectClass("res.users");
         OperationOptions oo = new OperationOptionsBuilder().build();
 
-        Set<AttributeDelta> ch = new HashSet<>();
-        ch.add(new AttributeDeltaBuilder().setName("groups_id").addValueToRemove(6).build());
-        //ch.add(new AttributeDeltaBuilder().setName("groups_id").addValueToAdd(3).build());
+        // create a user with groups relation specified
+        String login = "test" + System.currentTimeMillis();
+        String name = "Test U" + System.currentTimeMillis();
+        Uid uid = connector.create(oc, Set.of(
+                AttributeBuilder.build("login", login),
+                AttributeBuilder.build("name", name),
+                AttributeBuilder.build("groups_id", 2, 3)
+        ), oo);
 
-        connector.updateDelta(oc, uid, ch, oo);
+        // update user groups using delta:
+
+        // add a reference and verify
+        connector.updateDelta(oc, uid, Set.of(new AttributeDeltaBuilder().setName("groups_id").addValueToAdd(5, 6).build()), oo);
+
+        TestResultsHandler results = new TestResultsHandler();
+        connector.executeQuery(oc, new EqualsFilter(AttributeBuilder.build("name", name)), results, oo);
+        assertEquals("expect groups 5 and 6 to be added", Set.of(2, 3, 5, 6), new HashSet<>(
+                results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
+
+        // remove a reference
+        connector.updateDelta(oc, uid, Set.of(new AttributeDeltaBuilder().setName("groups_id").addValueToRemove(5).build()), oo);
+
+        results = new TestResultsHandler();
+        connector.executeQuery(oc, new EqualsFilter(AttributeBuilder.build("name", name)), results, oo);
+        assertEquals("expect group 5 to be removed", Set.of(2, 3, 6), new HashSet<>(
+                results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
     }
 
     @Test
@@ -361,12 +397,134 @@ public class ConnectorTest {
 
     @Test
     public void testSearchFilters() {
-        // TODO
+        ObjectClass oc = new ObjectClass("hr.employee");
+
+        // create an employee with some details
+        String name = "Test Emp" + System.currentTimeMillis();
+        String pin = "123456";
+        ZonedDateTime bd = ZonedDateTime.of(LocalDate.ofYearDay(1900, 42), LocalTime.MIN, ZoneId.systemDefault());
+        Set<Attribute> attrs = Set.of(
+                AttributeBuilder.build("name", name),
+                AttributeBuilder.build("pin", pin),
+                AttributeBuilder.build("color", 1),
+                AttributeBuilder.build("certificate", "master"),
+                AttributeBuilder.build("spouse_birthdate", bd)
+        );
+        Uid uid = connector.create(oc, attrs, new OperationOptionsBuilder().build());
+
+        BiConsumer<Filter, Boolean> assertFound = (filter, shouldMatch) -> {
+            TestResultsHandler results = new TestResultsHandler();
+            connector.executeQuery(oc, filter, results, new OperationOptionsBuilder().build());
+
+            assertEquals("expect to " + (shouldMatch ? "" : "not") + " match record", shouldMatch,
+                    results.getConnectorObjects().stream().anyMatch(obj -> obj.getUid().equals(uid)));
+        };
+
+        // very simple filter by name
+        assertFound.accept(new EqualsFilter(AttributeBuilder.build("name", name)), true);
+        assertFound.accept(new EqualsFilter(AttributeBuilder.build("name", name + "_notexists")), false);
+
+        // filter with "not"
+        assertFound.accept(new NotFilter(new EqualsFilter(AttributeBuilder.build("name", name))), false);
+        assertFound.accept(new NotFilter(new EqualsFilter(AttributeBuilder.build("name", name + "_notexists"))), true);
+
+        // filter with "and"
+        assertFound.accept(new AndFilter(
+                new EqualsFilter(AttributeBuilder.build("name", name)),
+                new EqualsFilter(AttributeBuilder.build("color", 1))), true);
+        assertFound.accept(new AndFilter(
+                new EqualsFilter(AttributeBuilder.build("name", name)),
+                new EqualsFilter(AttributeBuilder.build("color", 2))), false);
+
+        // filter with "or"
+        assertFound.accept(new OrFilter(
+                new EqualsFilter(AttributeBuilder.build("name", name)),
+                new EqualsFilter(AttributeBuilder.build("color", 2))), true);
+        assertFound.accept(new OrFilter(
+                new EqualsFilter(AttributeBuilder.build("name", name + "_notexists")),
+                new EqualsFilter(AttributeBuilder.build("color", 1))), true);
+        assertFound.accept(new OrFilter(
+                new EqualsFilter(AttributeBuilder.build("name", name + "_notexists")),
+                new EqualsFilter(AttributeBuilder.build("color", 2))), false);
+
+        // filter with nested not/and/or
+        assertFound.accept(new OrFilter(
+                new NotFilter(new EqualsFilter(AttributeBuilder.build("name", name + "_notexists"))),
+                new EqualsFilter(AttributeBuilder.build("color", 2))), true);
+        assertFound.accept(new OrFilter(
+                new AndFilter(
+                        new EqualsFilter(AttributeBuilder.build("name", name)),
+                        new EqualsFilter(AttributeBuilder.build("pin", pin))),
+                new EqualsFilter(AttributeBuilder.build("color", 2))), true);
+
+        // filter with "starts with", "ends with" and "contains"
+        assertFound.accept(new StartsWithFilter(AttributeBuilder.build("name", name.substring(0, 5))), true);
+        assertFound.accept(new StartsWithFilter(AttributeBuilder.build("pin", pin.substring(0, pin.length() - 1))), true);
+        assertFound.accept(new StartsWithFilter(AttributeBuilder.build("name", name.substring(0, 4) + "#")), false);
+
+        assertFound.accept(new EndsWithFilter(AttributeBuilder.build("name", name.substring(5))), true);
+        assertFound.accept(new EndsWithFilter(AttributeBuilder.build("pin", pin.substring(3))), true);
+        assertFound.accept(new EndsWithFilter(AttributeBuilder.build("name", "#" + name.substring(5))), false);
+
+        assertFound.accept(new ContainsFilter(AttributeBuilder.build("name", name.substring(3, name.length() - 2))), true);
+        assertFound.accept(new ContainsFilter(AttributeBuilder.build("name", "#" + name.substring(4, name.length() - 2))), false);
+
+        // filter with comparison
+        var bd_before = ZonedDateTime.of(LocalDate.ofYearDay(1900, 2), LocalTime.MIN, ZoneId.systemDefault());
+        var bd_after = ZonedDateTime.of(LocalDate.ofYearDay(1900, 84), LocalTime.MIN, ZoneId.systemDefault());
+
+        assertFound.accept(new LessThanFilter(AttributeBuilder.build("spouse_birthdate", bd_after)), true);
+        assertFound.accept(new LessThanFilter(AttributeBuilder.build("spouse_birthdate", bd_before)), false);
+        assertFound.accept(new LessThanFilter(AttributeBuilder.build("spouse_birthdate", bd)), false);
+
+        assertFound.accept(new LessThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_after)), true);
+        assertFound.accept(new LessThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_before)), false);
+        assertFound.accept(new LessThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd)), true);
+
+        assertFound.accept(new GreaterThanFilter(AttributeBuilder.build("spouse_birthdate", bd_after)), false);
+        assertFound.accept(new GreaterThanFilter(AttributeBuilder.build("spouse_birthdate", bd_before)), true);
+        assertFound.accept(new GreaterThanFilter(AttributeBuilder.build("spouse_birthdate", bd)), false);
+
+        assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_after)), false);
+        assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_before)), true);
+        assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd)), true);
     }
 
     @Test
-    public void testOdooTypeMapping() {
-        // TODO
+    public void testSearchOptions() {
+        ObjectClass oc = new ObjectClass("hr.employee");
+
+        // create 2 employees with some details
+        String name = "Test Emp" + System.currentTimeMillis();
+        String name1 = name + "_1";
+        String name2 = name + "_2";
+        Uid uid1 = connector.create(oc, Set.of(AttributeBuilder.build("name", name1)), new OperationOptionsBuilder().build());
+        Uid uid2 = connector.create(oc, Set.of(AttributeBuilder.build("name", name2)), new OperationOptionsBuilder().build());
+
+        Filter filter = new StartsWithFilter(AttributeBuilder.build("name", name));
+
+        // search with paging
+        TestResultsHandler results = new TestResultsHandler();
+        connector.executeQuery(oc, filter, results, new OperationOptionsBuilder().setPagedResultsOffset(1).setPageSize(10).build());
+        assertTrue("expect to match record 1", results.getConnectorObjects().stream().anyMatch(obj -> obj.getUid().equals(uid1)));
+        assertTrue("expect to match record 2", results.getConnectorObjects().stream().anyMatch(obj -> obj.getUid().equals(uid2)));
+
+        results = new TestResultsHandler();
+        connector.executeQuery(oc, filter, results, new OperationOptionsBuilder().setPagedResultsOffset(1).setPageSize(1).build());
+        boolean uid1Contained = results.getConnectorObjects().stream().anyMatch(obj -> obj.getUid().equals(uid1));
+        boolean uid2Contained = results.getConnectorObjects().stream().anyMatch(obj -> obj.getUid().equals(uid2));
+        assertTrue("expect to match record 1 or 2 but not both", (uid1Contained && !uid2Contained) || (uid2Contained && !uid1Contained));
+
+        // search with sort by name
+        results = new TestResultsHandler();
+        connector.executeQuery(oc, filter, results, new OperationOptionsBuilder().setSortKeys(new SortKey("name", true)).build());
+        assertEquals("expect record 1 to come first when sort by name ascending", uid1, results.getConnectorObjects().get(0).getUid());
+        assertEquals("expect record 2 to come second when sort by name ascending", uid2, results.getConnectorObjects().get(1).getUid());
+
+        results = new TestResultsHandler();
+        connector.executeQuery(oc, filter, results, new OperationOptionsBuilder().setSortKeys(new SortKey("name", false)).build());
+        assertEquals("expect record 2 to come first when sort by name descending", uid2, results.getConnectorObjects().get(0).getUid());
+        assertEquals("expect record 1 to come second when sort by name descending", uid1, results.getConnectorObjects().get(1).getUid());
     }
 
     @Test

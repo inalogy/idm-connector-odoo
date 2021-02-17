@@ -5,7 +5,6 @@ import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueE
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -19,9 +18,7 @@ public class OdooSelectionType extends OdooType {
 
     /**
      * Regex pattern to match selection values. Usual format is [('value1', 'label1'), ('value2', 'label2')]
-     * but we do not take ' escaping into account.
-     * <p>
-     * TODO check escaping, undocumented in odoo?
+     * but we do not take ' escaping into account because undocumented.
      */
     private static final Pattern VALUES_PATTERN = Pattern.compile("\\('([^']*)', '[^']*'\\)(, )?");
 
@@ -61,10 +58,10 @@ public class OdooSelectionType extends OdooType {
                 throw new InvalidAttributeValueException("Attribute value '" + attributeValueFromConnId + "' is not contained in allowed " +
                         "selection values " + values);
             }
-            return Optional.of(attributeValueFromConnId);
+            return attributeValueFromConnId;
         }
 
-        return Optional.empty();
+        return super.mapToOdooValue(attributeValueFromConnId);
     }
 
 }

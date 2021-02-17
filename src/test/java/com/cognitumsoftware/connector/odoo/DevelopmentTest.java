@@ -1,14 +1,9 @@
 package com.cognitumsoftware.connector.odoo;
 
+import org.apache.commons.lang3.StringUtils;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.objects.AttributeInfo;
-import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.OperationOptions;
-import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
 import org.identityconnectors.framework.common.objects.Schema;
-import org.identityconnectors.framework.common.objects.SortKey;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -22,7 +17,6 @@ import static java.util.Collections.singletonList;
  * Not really unit tests, just for coding purpose.
  * They need to be transformed into real tests with assertions, finally.
  */
-@Ignore
 public class DevelopmentTest {
 
     private OdooConnector connector;
@@ -37,8 +31,7 @@ public class DevelopmentTest {
         }});
     }
 
-    @Test
-    public void testSchemaRetrieval() {
+    public void schemaRetrieval() {
         Schema s = connector.schema();
         s.getObjectClassInfo().stream().filter(oci -> oci.getType().equals("res.users")).forEach(oci -> {
             System.out.println("----------------------------------");
@@ -57,10 +50,10 @@ public class DevelopmentTest {
         });
     }
 
-    @Test
     public void dumpModel() {
         OdooClient client = new OdooClient(connector.getConfiguration());
-        String modelName = "res.users";
+        //String modelName = "res.users";
+        String modelName = "hr.employee";
 
         client.executeOperationWithAuthentication(() -> {
             Object[] models = (Object[]) client.executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ,
@@ -78,8 +71,12 @@ public class DevelopmentTest {
             System.out.println("----------- Fields Overview ------------");
             for (var fieldObj : fields) {
                 Map<String, Object> field = (Map<String, Object>) fieldObj;
-                System.out.println("Field " + field.get(MODEL_FIELD_FIELD_NAME) + ": ttype=" + field.get(MODEL_FIELD_FIELD_TYPE)
-                        + ", required=" + field.get(MODEL_FIELD_FIELD_REQUIRED) + ", related=" + field.get("related"));
+                System.out.println(
+                        "Field " + StringUtils.rightPad((String) field.get(MODEL_FIELD_FIELD_NAME), 35)
+                                + ": ttype=" + StringUtils.rightPad((String) field.get(MODEL_FIELD_FIELD_TYPE), 10)
+                                + ", req=" + StringUtils.rightPad(field.get(MODEL_FIELD_FIELD_REQUIRED).toString(), 5)
+                                + ", store=" + StringUtils.rightPad(field.get("store").toString(), 5)
+                                + ", rel=" + StringUtils.rightPad(field.get("related").toString(), 25));
             }
 
             System.out.println("----------- Fields ------------");
@@ -103,24 +100,8 @@ public class DevelopmentTest {
         System.out.println(field.getKey() + ": " + value);
     }
 
-    @Test
-    public void testSearch() {
-        ObjectClass oc = new ObjectClass("res.groups");
-        OperationOptions oo = new OperationOptionsBuilder()
-                .setPagedResultsOffset(1)
-                .setPageSize(10)
-                .setSortKeys(new SortKey("name", true))
-                //.setAttributesToGet("email", "name", "__last_update", "children", "login", "signature")
-                .build();
-        var filter = connector.createFilterTranslator(oc, oo).translate(
-                null);
-        //new EqualsFilter(AttributeBuilder.build("__UID__", "28")));
-        //new EqualsFilter(AttributeBuilder.build("login", "Tester1")));
-
-        TestResultsHandler rc = new TestResultsHandler();
-        connector.executeQuery(oc, filter.isEmpty() ? null : filter.iterator().next(), rc, oo);
-
-        rc.getConnectorObjects().forEach(System.out::println);
+    public static void main(String[] args) {
+        new DevelopmentTest().dumpModel();
     }
 
 }
