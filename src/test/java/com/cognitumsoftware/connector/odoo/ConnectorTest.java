@@ -412,13 +412,7 @@ public class ConnectorTest {
         );
         Uid uid = connector.create(oc, attrs, new OperationOptionsBuilder().build());
 
-        BiConsumer<Filter, Boolean> assertFound = (filter, shouldMatch) -> {
-            TestResultsHandler results = new TestResultsHandler();
-            connector.executeQuery(oc, filter, results, new OperationOptionsBuilder().build());
-
-            assertEquals("expect to " + (shouldMatch ? "" : "not") + " match record", shouldMatch,
-                    results.getConnectorObjects().stream().anyMatch(obj -> obj.getUid().equals(uid)));
-        };
+        BiConsumer<Filter, Boolean> assertFound = createAssertFound(oc, uid);
 
         // very simple filter by name
         assertFound.accept(new EqualsFilter(AttributeBuilder.build("name", name)), true);
@@ -488,6 +482,39 @@ public class ConnectorTest {
         assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_after)), false);
         assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_before)), true);
         assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd)), true);
+    }
+
+    @Test
+    public void testSearchLikeEscaping() {
+        ObjectClass oc = new ObjectClass("hr.employee");
+
+        // create an employee that includes the % wildcard in its name
+        String name = "Emp%loyee E" + System.currentTimeMillis();
+        Set<Attribute> attrs = Set.of(
+                AttributeBuilder.build("name", name)
+        );
+        Uid uid = connector.create(oc, attrs, new OperationOptionsBuilder().build());
+
+        // search using operators that have wildcards
+        BiConsumer<Filter, Boolean> assertFound = createAssertFound(oc, uid);
+
+        assertFound.accept(new ContainsFilter(AttributeBuilder.build("name", "Emp%")), true);
+        assertFound.accept(new ContainsFilter(AttributeBuilder.build("name", "Emp_")), false);
+        assertFound.accept(new ContainsFilter(AttributeBuilder.build("name", "Emp%loy_")), false);
+        assertFound.accept(new StartsWithFilter(AttributeBuilder.build("name", "Emp%")), true);
+        assertFound.accept(new StartsWithFilter(AttributeBuilder.build("name", "Emp%l")), true);
+        assertFound.accept(new StartsWithFilter(AttributeBuilder.build("name", "Emp_")), false);
+        assertFound.accept(new EndsWithFilter(AttributeBuilder.build("name", name.substring(name.indexOf('%')))), true);
+    }
+
+    private BiConsumer<Filter, Boolean> createAssertFound(ObjectClass oc, Uid uid) {
+        return (filter, shouldMatch) -> {
+            TestResultsHandler results = new TestResultsHandler();
+            connector.executeQuery(oc, filter, results, new OperationOptionsBuilder().build());
+
+            assertEquals("expect to " + (shouldMatch ? "" : "not") + " match record", shouldMatch,
+                    results.getConnectorObjects().stream().anyMatch(obj -> obj.getUid().equals(uid)));
+        };
     }
 
     @Test

@@ -54,6 +54,8 @@ public final class OdooConstants {
     public final static String OPERATOR_GREATER = ">";
     public final static String OPERATOR_GREATER_EQUALS = ">=";
 
+    public final static String OPERATOR_LIKE_ESCAPE_CHAR = "\\";
+
     private OdooConstants() {
         // no instancing
     }

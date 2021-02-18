@@ -1,0 +1,22 @@
+{
+  "Servers": {
+    "1": {
+      "Group": "Odoo Connector Dev",
+      "Name": "db-idm",
+      "Host": "db-idm",
+      "Port": 5432,
+      "MaintenanceDB": "midpoint",
+      "Username": "midpoint",
+      "SSLMode": "prefer"
+    },
+    "2": {
+      "Group": "Odoo Connector Dev",
+      "Name": "db-odoo",
+      "Host": "db-odoo",
+      "Port": 5432,
+      "MaintenanceDB": "postgres",
+      "Username": "odoo",
+      "SSLMode": "prefer"
+    }
+  }
+}

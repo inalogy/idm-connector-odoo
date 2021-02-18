@@ -50,7 +50,6 @@ public class OdooSearch {
 
     private static Map<Class<? extends AttributeFilter>, String> attributeFilterClassToOperatorMap = Map.of(
             EqualsFilter.class, OPERATOR_EQUALS,
-            ContainsFilter.class, OPERATOR_LIKE,
             GreaterThanFilter.class, OPERATOR_GREATER,
             GreaterThanOrEqualFilter.class, OPERATOR_GREATER_EQUALS,
             LessThanFilter.class, OPERATOR_SMALLER,
@@ -213,14 +212,19 @@ public class OdooSearch {
                 return singletonList(asList(
                         field.getName(),
                         OPERATOR_LIKE2,
-                        // TODO: escaping undocumented in odoo API but we should escape attribute value (more occurrences see below)
-                        value + OPERATOR_LIKE_ANY_STRING));
+                        escapeForLikeOperator(value) + OPERATOR_LIKE_ANY_STRING));
             }
             else if (query instanceof EndsWithFilter) {
                 return singletonList(asList(
                         field.getName(),
                         OPERATOR_LIKE2,
-                        OPERATOR_LIKE_ANY_STRING + value));
+                        OPERATOR_LIKE_ANY_STRING + escapeForLikeOperator(value)));
+            }
+            else if (query instanceof ContainsFilter) {
+                return singletonList(asList(
+                        field.getName(),
+                        OPERATOR_LIKE,
+                        escapeForLikeOperator(value)));
             }
 
             String operator = attributeFilterClassToOperatorMap.get(query.getClass());
@@ -251,6 +255,13 @@ public class OdooSearch {
         }
 
         throw new UnsupportedOperationException("Filter of type " + query.getClass().getName() + " is not supported for search.");
+    }
+
+    private String escapeForLikeOperator(Object value) {
+        return value.toString()
+                .replace(OPERATOR_LIKE_ESCAPE_CHAR, OPERATOR_LIKE_ESCAPE_CHAR + OPERATOR_LIKE_ESCAPE_CHAR)
+                .replace("%", OPERATOR_LIKE_ESCAPE_CHAR + "%")
+                .replace("_", OPERATOR_LIKE_ESCAPE_CHAR + "_");
     }
 
     private Map<String, Object> prepareQueryParameters(OdooModel model, OperationOptions options) {

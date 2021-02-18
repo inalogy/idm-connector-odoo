@@ -22,6 +22,8 @@ services:
       - POSTGRES_USER=odoo
       - POSTGRES_PASSWORD=odoo
       - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    # if you need to debug odoo SQL statements: use this command to log all SQL statements in postgres
+    #command: ["postgres", "-c", "log_statement=all"]
     volumes:
       - pg_odoo_data:/var/lib/postgresql/data
 

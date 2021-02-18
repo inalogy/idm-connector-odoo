@@ -38,6 +38,19 @@ services:
     volumes:
       - pg_idm_data:/var/lib/postgresql/data
 
+  # allows to inspect the databases (midpoint, odoo)
+  pgadmin:
+    image: dpage/pgadmin4:4.30
+    depends_on:
+      - db-idm
+    ports:
+      - 8026:80
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@test.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    volumes:
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+
 secrets:
   db-idm-secret:
     file: ./secrets/db_idm.txt
