@@ -63,11 +63,9 @@ You can debug the connector using **remote debugging** in your IDE. Port 5005 is
 
 ## Limitations
 
-- When using the "expand relations" feature, create and update operations may performs multiple API calls which are not covered by a single
+- When using the "expand relations" feature, create and update operations may perform multiple API calls which are not covered by a single
   transaction. This may cause trouble regarding data consistency when other write operations are executed on the same records in Odoo. Also
   rollback in case of partial execution due to an error is implemented but may fail if data is updated in parallel.
-
-- Some necessary escaping is undocumented in Odoo API, see TODOs.
 
 ## Resources
 
