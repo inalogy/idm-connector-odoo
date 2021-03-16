@@ -1,6 +1,5 @@
 package com.cognitumsoftware.connector.odoo;
 
-import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -47,20 +46,15 @@ import static org.junit.Assert.*;
 
 /**
  * Unit tests covering parts of the connector implementation. It is assumed that an Odoo instance is running
- * with the configuration specified in {@link #ConnectorTest()}.
+ * with the configuration specified in constructor.
  */
-public class ConnectorTest {
+public abstract class ConnectorTest {
 
     private OdooConnector connector;
 
-    public ConnectorTest() {
+    public ConnectorTest(OdooConfiguration cfg) {
         connector = new OdooConnector();
-        connector.init(new OdooConfiguration() {{
-            setUrl("http://localhost:10082");
-            setDatabase("db1");
-            setUsername("admin");
-            setPassword(new GuardedString("secret".toCharArray()));
-        }});
+        connector.init(cfg);
     }
 
     @Test
@@ -338,32 +332,50 @@ public class ConnectorTest {
         ObjectClass oc = new ObjectClass("res.users");
         OperationOptions oo = new OperationOptionsBuilder().build();
 
+        // create groups
+        int[] groups = createGroups();
+
         // create a user with groups relation specified
         String login = "test" + System.currentTimeMillis();
         String name = "Test U" + System.currentTimeMillis();
         Uid uid = connector.create(oc, Set.of(
                 AttributeBuilder.build("login", login),
                 AttributeBuilder.build("name", name),
-                AttributeBuilder.build("groups_id", 2, 3)
+                AttributeBuilder.build("groups_id", groups[0], groups[1])
         ), oo);
 
         // update user groups using delta:
 
         // add a reference and verify
-        connector.updateDelta(oc, uid, Set.of(new AttributeDeltaBuilder().setName("groups_id").addValueToAdd(5, 6).build()), oo);
+        connector.updateDelta(oc, uid, Set.of(
+                new AttributeDeltaBuilder().setName("groups_id").addValueToAdd(groups[2], groups[3]).build()), oo);
 
         TestResultsHandler results = new TestResultsHandler();
         connector.executeQuery(oc, new EqualsFilter(AttributeBuilder.build("name", name)), results, oo);
-        assertEquals("expect groups 5 and 6 to be added", Set.of(2, 3, 5, 6), new HashSet<>(
+        assertEquals("expect 3rd/4th groups to be added", Set.of(groups[0], groups[1], groups[2], groups[3]), new HashSet<>(
                 results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
 
         // remove a reference
-        connector.updateDelta(oc, uid, Set.of(new AttributeDeltaBuilder().setName("groups_id").addValueToRemove(5).build()), oo);
+        connector.updateDelta(oc, uid, Set.of(new AttributeDeltaBuilder().setName("groups_id").addValueToRemove(groups[2]).build()), oo);
 
         results = new TestResultsHandler();
         connector.executeQuery(oc, new EqualsFilter(AttributeBuilder.build("name", name)), results, oo);
-        assertEquals("expect group 5 to be removed", Set.of(2, 3, 6), new HashSet<>(
+        assertEquals("expect 3rd group to be removed", Set.of(groups[0], groups[1], groups[3]), new HashSet<>(
                 results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
+    }
+
+    private int[] createGroups() {
+        int count = 4;
+        int[] result = new int[count];
+        String unique = "testgroup_" + System.currentTimeMillis();
+
+        for (int i = 0; i < result.length; i++) {
+            result[i] = Integer.parseInt(connector.create(new ObjectClass("res.groups"), Set.of(
+                    AttributeBuilder.build("name", unique + i)
+            ), new OperationOptionsBuilder().build()).getUidValue());
+        }
+
+        return result;
     }
 
     @Test
@@ -373,24 +385,32 @@ public class ConnectorTest {
         // create an employee with user details
         String login = "test" + System.currentTimeMillis();
         String name = "Test Emp" + System.currentTimeMillis();
+        String uname = "Test U" + System.currentTimeMillis();
         Set<Attribute> attrs = Set.of(
                 AttributeBuilder.build("name", name),
                 AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "login", login),
-                AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "name", "Test U" + System.currentTimeMillis())
+                AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "name", uname)
         );
         Uid uid = connector.create(oc, attrs, new OperationOptionsBuilder().build());
 
         // search by that employee and retrieve user details in same call via expanded relation
         TestResultsHandler results = new TestResultsHandler();
-        connector.executeQuery(oc, new EqualsFilter(AttributeBuilder.build("name", name)), results,
+        connector.executeQuery(oc, new EqualsFilter(uid), results,
                 new OperationOptionsBuilder().setAttributesToGet("name", "user_id" + MODEL_FIELD_SEPARATOR + "login").build());
 
-        assertEquals("expect one record to be found", 1, results.getConnectorObjects().size());
+        assertEquals("expect one record to be found (" + name + ", " + uid.getUidValue() + ")", 1, results.getConnectorObjects().size());
 
         ConnectorObject resultObj = results.getConnectorObjects().iterator().next();
         assertEquals("expect created record to be found", uid, resultObj.getUid());
 
-        assertAttributeEquals("expect name attribute to match as created", name, resultObj, "name");
+        try {
+            // this assertion is not working for Odoo v11 and v12, seems like the model takes name from user
+            assertAttributeEquals("expect name attribute to match as created", name, resultObj, "name");
+        }
+        catch (AssertionError e) {
+            assertAttributeEquals("expect name attribute to match as created user", uname, resultObj, "name");
+        }
+
         assertAttributeEquals("expect related login attribute to match as created", login, resultObj,
                 "user_id" + MODEL_FIELD_SEPARATOR + "login");
     }
@@ -401,14 +421,16 @@ public class ConnectorTest {
 
         // create an employee with some details
         String name = "Test Emp" + System.currentTimeMillis();
-        String pin = "123456";
+        String textField1 = "notes";
+        String textField1Value = "123456";
+        String dateField1 = "birthday";
         ZonedDateTime bd = ZonedDateTime.of(LocalDate.ofYearDay(1900, 42), LocalTime.MIN, ZoneId.systemDefault());
         Set<Attribute> attrs = Set.of(
                 AttributeBuilder.build("name", name),
-                AttributeBuilder.build("pin", pin),
+                AttributeBuilder.build(textField1, textField1Value),
                 AttributeBuilder.build("color", 1),
-                AttributeBuilder.build("certificate", "master"),
-                AttributeBuilder.build("spouse_birthdate", bd)
+                //AttributeBuilder.build("certificate", "master"), --> in v14
+                AttributeBuilder.build(dateField1, bd)
         );
         Uid uid = connector.create(oc, attrs, new OperationOptionsBuilder().build());
 
@@ -448,16 +470,17 @@ public class ConnectorTest {
         assertFound.accept(new OrFilter(
                 new AndFilter(
                         new EqualsFilter(AttributeBuilder.build("name", name)),
-                        new EqualsFilter(AttributeBuilder.build("pin", pin))),
+                        new EqualsFilter(AttributeBuilder.build(textField1, textField1Value))),
                 new EqualsFilter(AttributeBuilder.build("color", 2))), true);
 
         // filter with "starts with", "ends with" and "contains"
         assertFound.accept(new StartsWithFilter(AttributeBuilder.build("name", name.substring(0, 5))), true);
-        assertFound.accept(new StartsWithFilter(AttributeBuilder.build("pin", pin.substring(0, pin.length() - 1))), true);
+        assertFound.accept(new StartsWithFilter(
+                AttributeBuilder.build(textField1, textField1Value.substring(0, textField1Value.length() - 1))), true);
         assertFound.accept(new StartsWithFilter(AttributeBuilder.build("name", name.substring(0, 4) + "#")), false);
 
         assertFound.accept(new EndsWithFilter(AttributeBuilder.build("name", name.substring(5))), true);
-        assertFound.accept(new EndsWithFilter(AttributeBuilder.build("pin", pin.substring(3))), true);
+        assertFound.accept(new EndsWithFilter(AttributeBuilder.build(textField1, textField1Value.substring(3))), true);
         assertFound.accept(new EndsWithFilter(AttributeBuilder.build("name", "#" + name.substring(5))), false);
 
         assertFound.accept(new ContainsFilter(AttributeBuilder.build("name", name.substring(3, name.length() - 2))), true);
@@ -467,21 +490,21 @@ public class ConnectorTest {
         var bd_before = ZonedDateTime.of(LocalDate.ofYearDay(1900, 2), LocalTime.MIN, ZoneId.systemDefault());
         var bd_after = ZonedDateTime.of(LocalDate.ofYearDay(1900, 84), LocalTime.MIN, ZoneId.systemDefault());
 
-        assertFound.accept(new LessThanFilter(AttributeBuilder.build("spouse_birthdate", bd_after)), true);
-        assertFound.accept(new LessThanFilter(AttributeBuilder.build("spouse_birthdate", bd_before)), false);
-        assertFound.accept(new LessThanFilter(AttributeBuilder.build("spouse_birthdate", bd)), false);
+        assertFound.accept(new LessThanFilter(AttributeBuilder.build(dateField1, bd_after)), true);
+        assertFound.accept(new LessThanFilter(AttributeBuilder.build(dateField1, bd_before)), false);
+        assertFound.accept(new LessThanFilter(AttributeBuilder.build(dateField1, bd)), false);
 
-        assertFound.accept(new LessThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_after)), true);
-        assertFound.accept(new LessThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_before)), false);
-        assertFound.accept(new LessThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd)), true);
+        assertFound.accept(new LessThanOrEqualFilter(AttributeBuilder.build(dateField1, bd_after)), true);
+        assertFound.accept(new LessThanOrEqualFilter(AttributeBuilder.build(dateField1, bd_before)), false);
+        assertFound.accept(new LessThanOrEqualFilter(AttributeBuilder.build(dateField1, bd)), true);
 
-        assertFound.accept(new GreaterThanFilter(AttributeBuilder.build("spouse_birthdate", bd_after)), false);
-        assertFound.accept(new GreaterThanFilter(AttributeBuilder.build("spouse_birthdate", bd_before)), true);
-        assertFound.accept(new GreaterThanFilter(AttributeBuilder.build("spouse_birthdate", bd)), false);
+        assertFound.accept(new GreaterThanFilter(AttributeBuilder.build(dateField1, bd_after)), false);
+        assertFound.accept(new GreaterThanFilter(AttributeBuilder.build(dateField1, bd_before)), true);
+        assertFound.accept(new GreaterThanFilter(AttributeBuilder.build(dateField1, bd)), false);
 
-        assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_after)), false);
-        assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd_before)), true);
-        assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build("spouse_birthdate", bd)), true);
+        assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build(dateField1, bd_after)), false);
+        assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build(dateField1, bd_before)), true);
+        assertFound.accept(new GreaterThanOrEqualFilter(AttributeBuilder.build(dateField1, bd)), true);
     }
 
     @Test

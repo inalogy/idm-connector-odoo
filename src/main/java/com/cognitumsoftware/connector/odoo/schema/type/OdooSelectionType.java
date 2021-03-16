@@ -28,8 +28,11 @@ public class OdooSelectionType extends OdooType {
     public OdooType refine(String modelName, String fieldName, Map<String, Object> fieldProperties) {
         OdooSelectionType refined = new OdooSelectionType();
 
-        String selection = (String) fieldProperties.get(MODEL_FIELD_FIELD_SELECTION);
-        refined.values = parseValues(selection);
+        // sometimes selection values are not defined for whatever reason
+        if (fieldProperties.get(MODEL_FIELD_FIELD_SELECTION) instanceof String) {
+            String selection = (String) fieldProperties.get(MODEL_FIELD_FIELD_SELECTION);
+            refined.values = parseValues(selection);
+        }
 
         return refined.values != null ? refined : null;
     }

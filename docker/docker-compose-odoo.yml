@@ -2,18 +2,18 @@ version: '3.9'
 
 services:
 
-  odoo:
-    image: odoo:14
+  odoo_10:
+    image: odoo:10
     depends_on:
-      - db-odoo
+      - db-odoo_10
     ports:
       - 10082:8069
     environment:
-      - HOST=db-odoo
+      - HOST=db-odoo_10
       - USER=odoo
       - PASSWORD=odoo
 
-  db-odoo:
+  db-odoo_10:
     image: postgres:12.2
     ports:
       - 15434:5432
@@ -25,10 +25,110 @@ services:
     # if you need to debug odoo SQL statements: use this command to log all SQL statements in postgres
     #command: ["postgres", "-c", "log_statement=all"]
     volumes:
-      - pg_odoo_data:/var/lib/postgresql/data
+      - pg_odoo_data_10:/var/lib/postgresql/data
+
+  odoo_11:
+    image: odoo:11
+    depends_on:
+      - db-odoo_11
+    ports:
+      - 11082:8069
+    environment:
+      - HOST=db-odoo_11
+      - USER=odoo
+      - PASSWORD=odoo
+
+  db-odoo_11:
+    image: postgres:12.2
+    ports:
+      - 15435:5432
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    volumes:
+      - pg_odoo_data_11:/var/lib/postgresql/data
+
+  odoo_12:
+    image: odoo:12
+    depends_on:
+      - db-odoo_12
+    ports:
+      - 12082:8069
+    environment:
+      - HOST=db-odoo_12
+      - USER=odoo
+      - PASSWORD=odoo
+
+  db-odoo_12:
+    image: postgres:12.2
+    ports:
+      - 15436:5432
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    volumes:
+      - pg_odoo_data_12:/var/lib/postgresql/data
+
+  odoo_13:
+    image: odoo:13
+    depends_on:
+      - db-odoo_13
+    ports:
+      - 13082:8069
+    environment:
+      - HOST=db-odoo_13
+      - USER=odoo
+      - PASSWORD=odoo
+
+  db-odoo_13:
+    image: postgres:12.2
+    ports:
+      - 15437:5432
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    volumes:
+      - pg_odoo_data_13:/var/lib/postgresql/data
+
+  odoo_14:
+    image: odoo:14
+    depends_on:
+      - db-odoo_14
+    ports:
+      - 14082:8069
+    environment:
+      - HOST=db-odoo_14
+      - USER=odoo
+      - PASSWORD=odoo
+
+  db-odoo_14:
+    image: postgres:12.2
+    ports:
+      - 15438:5432
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    volumes:
+      - pg_odoo_data_14:/var/lib/postgresql/data
 
 volumes:
-  pg_odoo_data:
+  pg_odoo_data_10:
+    driver: local
+  pg_odoo_data_11:
+    driver: local
+  pg_odoo_data_12:
+    driver: local
+  pg_odoo_data_13:
+    driver: local
+  pg_odoo_data_14:
     driver: local
 
 networks:

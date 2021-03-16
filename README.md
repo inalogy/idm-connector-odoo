@@ -23,8 +23,9 @@ see instructions below.
 
 ### Using unit test
 
-Unit tests require an Odoo instance running. Follow step 1 and 2 of the next paragraph to start an Odoo instance. See ConnectorTest for test
-configuration.
+Unit tests require Odoo instances running. Follow step 1 and 2 of the next paragraph for each Odoo version to start the Odoo instances. See
+derivations of ConnectorTest class for test configuration. The Odoo "employee directory" app is required to be installed as tests rely on
+employee model. Tests are running against different versions of Odoo.
 
 ### Using midpoint
 

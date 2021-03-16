@@ -13,7 +13,9 @@ public class OdooBinaryType extends OdooType {
     @Override
     protected Optional<Object> mapToConnIdValue(Object valueFromXmlRpc) {
         if (valueFromXmlRpc instanceof String) {
-            return Optional.of(Base64.getDecoder().decode(valueFromXmlRpc.toString()));
+            // older versions of odoo deliver base64 with MIME format that includes newlines
+            String normalized = valueFromXmlRpc.toString().replaceAll("\\s", "");
+            return Optional.of(Base64.getDecoder().decode(normalized));
         }
 
         return Optional.empty();
