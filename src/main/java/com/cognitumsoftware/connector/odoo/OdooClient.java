@@ -5,6 +5,8 @@ import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.client.XmlRpcClient;
 import org.apache.xmlrpc.client.XmlRpcClientConfig;
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
+import org.apache.xmlrpc.client.XmlRpcTransport;
+import org.apache.xmlrpc.client.XmlRpcTransportFactory;
 import org.identityconnectors.framework.common.exceptions.ConfigurationException;
 import org.identityconnectors.framework.common.exceptions.ConnectionFailedException;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
@@ -31,6 +33,10 @@ public class OdooClient {
     private XmlRpcClientConfig xmlRpcClientConfigCommon;
 
     public OdooClient(OdooConfiguration configuration) {
+        this(configuration, false);
+    }
+
+    public OdooClient(OdooConfiguration configuration, boolean logTransport) {
         this.configuration = configuration;
         this.client = new XmlRpcClient();
         this.authenticationToken = null;
@@ -38,6 +44,10 @@ public class OdooClient {
 
         // set a default of XML-RPC client configuration that fits most cases
         client.setConfig(createXmlRpcClientConfig(OdooConstants.XMLRPC_OBJECT));
+
+        if (logTransport) {
+            client.setTransportFactory(() -> new MessageLoggingTransport(client));
+        }
     }
 
     private XmlRpcClientConfig createXmlRpcClientConfig(String path) {
