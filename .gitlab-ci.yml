@@ -1,0 +1,21 @@
+variables:
+  # Required for inter service communication
+  FF_NETWORK_PER_BUILD: "TRUE"
+  # PostgreSQL environment
+  POSTGRES_DB: "postgres"
+  POSTGRES_USER: "odoo"
+  POSTGRES_PASSWORD: "odoo"
+
+build:
+  image: openjdk:11
+  stage: build
+  services:
+    - name: odoo:14
+      alias: odoo
+      entrypoint: [ "/entrypoint.sh", "odoo", "-d", "db1", "-i", "hr", "--db_host=db", "--db_user=odoo", "--db_password=odoo" ]
+
+    - name: postgres:12.2
+      alias: db
+
+  script:
+    - ./gradlew clean build
