@@ -1,5 +1,6 @@
 package com.cognitumsoftware.connector.odoo;
 
+import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -48,13 +49,18 @@ import static org.junit.Assert.*;
  * Unit tests covering parts of the connector implementation. It is assumed that an Odoo instance is running
  * with the configuration specified in constructor.
  */
-public abstract class ConnectorTest {
+public class ConnectorTest {
 
     private OdooConnector connector;
 
-    public ConnectorTest(OdooConfiguration cfg) {
+    public ConnectorTest() {
         connector = new OdooConnector();
-        connector.init(cfg);
+        connector.init(new OdooConfiguration() {{
+            setUrl("http://odoo:8069");
+            setDatabase("db1");
+            setUsername("admin");
+            setPassword(new GuardedString("admin".toCharArray()));
+        }});
     }
 
     @Test
