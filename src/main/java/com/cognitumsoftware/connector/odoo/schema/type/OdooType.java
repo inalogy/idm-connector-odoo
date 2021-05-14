@@ -3,6 +3,7 @@ package com.cognitumsoftware.connector.odoo.schema.type;
 import com.cognitumsoftware.connector.odoo.schema.OdooField;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 
+import java.util.Base64;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -98,6 +99,12 @@ public abstract class OdooType {
      * Default implementation for the mapToOdoo*Value methods. Maps null values to {@link Boolean#FALSE}.
      */
     protected Object mapToOdooValue(Object attributeValueFromConnId) {
+
+        if (attributeValueFromConnId instanceof byte[]) {
+            byte[] bytes = (byte[]) attributeValueFromConnId;
+            attributeValueFromConnId = Base64.getEncoder().encodeToString(bytes);
+        }
+
         // mimic null behavior same as odoo returning boolean "false" for unset values
         return Objects.requireNonNullElse(attributeValueFromConnId, Boolean.FALSE);
     }
