@@ -54,13 +54,8 @@ public class ConnectorTest {
     private OdooConnector connector;
 
     public ConnectorTest() {
-        connector = new OdooConnector();
-        connector.init(new OdooConfiguration() {{
-            setUrl("http://odoo:8069");
-            setDatabase("db1");
-            setUsername("admin");
-            setPassword(new GuardedString("admin".toCharArray()));
-        }});
+        TestConnectorFactory connectorFactory = new TestConnectorFactory();
+        connector = connectorFactory.getOdooConnector();
     }
 
     @Test
