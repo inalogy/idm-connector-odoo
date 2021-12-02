@@ -12,9 +12,13 @@ import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
@@ -23,10 +27,11 @@ import static com.cognitumsoftware.connector.odoo.Constants.MODEL_FIELD_SEPARATO
 
 public class BinaryTest {
 
-    public static final String ATTR_IMAGE = "image_128";
+    // Use attribute image_1920 for Odoo 14+
+    public static final String ATTR_IMAGE = "image_1920";
 
     @Test
-    public void testBinaryReadAndCreate() {
+    public void testBinaryReadAndCreate() throws IOException {
         TestConnectorFactory connectorFactory = new TestConnectorFactory();
         OdooConnector connector = connectorFactory.getOdooConnector();
         ObjectClass oc = new ObjectClass("hr.employee");
@@ -39,7 +44,7 @@ public class BinaryTest {
         ConnectorObject employee1 = results.getConnectorObjects().get(0);
 
         Attribute image = employee1.getAttributeByName(ATTR_IMAGE);
-        Object jpgdata =  image.getValue().get(0);
+        Object jpgdata = image.getValue().get(0);
 
         // Create a new employee with the same image
 
@@ -53,10 +58,14 @@ public class BinaryTest {
         Assertions.assertEquals(2, results.getConnectorObjects().size());
         ConnectorObject employee2 = results.getConnectorObjects().get(1);
 
-        Assertions.assertEquals(
-                employee1.getAttributeByName(ATTR_IMAGE).getValue().get(0),
-                employee2.getAttributeByName(ATTR_IMAGE).getValue().get(0)
-        );
+        byte[] image1 = (byte[]) employee1.getAttributeByName(ATTR_IMAGE).getValue().get(0);
+        byte[] image2 = (byte[]) employee2.getAttributeByName(ATTR_IMAGE).getValue().get(0);
+
+        // Save files for debugging purposes
+        // Files.write(Paths.get("/tmp/image1.jpg"), image1);
+        // Files.write(Paths.get("/tmp/image2.jpg"), image2);
+
+        Assertions.assertArrayEquals(image1, image2);
     }
 
 }
