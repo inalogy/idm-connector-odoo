@@ -8,7 +8,7 @@
         <filter>
             <q:equal>
                 <q:path xmlns:c="http://midpoint.evolveum.com/xml/ns/public/common/common-3">c:connectorType</q:path>
-                <q:value>com.cognitumsoftware.connector.odoo.OdooConnector</q:value>
+                <q:value>OdooConnector</q:value>
             </q:equal>
         </filter>
     </connectorRef>
@@ -19,7 +19,7 @@
             <icfc:enableAttributesToGetSearchResultsHandler>false</icfc:enableAttributesToGetSearchResultsHandler>
         </icfc:resultsHandlerConfiguration>
         <icfc:configurationProperties
-                xmlns:gen471="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.cognitumsoftware.connector.odoo/com.cognitumsoftware.connector.odoo.OdooConnector">
+                xmlns:gen471="http://midpoint.evolveum.com/xml/ns/public/connector/icf-1/bundle/com.cognitumsoftware.connector.odoo/OdooConnector">
             <gen471:url>http://odoo:8069</gen471:url>
             <gen471:database>db1</gen471:database>
             <gen471:username>admin</gen471:username>
