@@ -8,7 +8,7 @@
 - handle relational data types many2one, one2many and many2many
 - allows modelling Odoo "res.groups" as entitlements in midpoint
 
-## How to build
+## How to build locally with a JDK
 
 Call gradle task *jar*:
 
@@ -18,6 +18,14 @@ The built connector jar file can then be found in the folder *./build/libs/*.
 
 However, we recommend using the gradle *build* task instead which also runs unit tests but requires Odoo to be run with some basic setup,
 see instructions below.
+
+## How to build locally with Docker
+
+It is possible from a machine with Docker which does not require a local JDK:
+
+> ./docker/build/build-docker.sh
+
+The built connector jar file can then be found in the folder *./build/libs/*.
 
 ## How to Test Connector
 

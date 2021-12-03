@@ -9,5 +9,5 @@
 .idea/jarRepositories.xml
 .idea/*.iml
 .idea/modules
-build
+/build
 */out/
