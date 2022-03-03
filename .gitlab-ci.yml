@@ -1,3 +1,6 @@
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/.gradle
+
 variables:
   # Required for inter service communication
   FF_NETWORK_PER_BUILD: "TRUE"
@@ -6,9 +9,14 @@ variables:
   POSTGRES_USER: "odoo"
   POSTGRES_PASSWORD: "odoo"
 
-build:
+cache:
+  paths:
+    - .gradle
+    - .m2
+
+test-odoo14:
   image: openjdk:11
-  stage: build
+  stage: test
   services:
     - name: odoo:14
       alias: odoo
@@ -17,8 +25,26 @@ build:
     - name: postgres:12.2
       alias: db
 
+test-odoo10:
+  image: openjdk:11
+  stage: test
+  services:
+    - name: odoo:10
+      alias: odoo
+      entrypoint: [ "/entrypoint.sh", "odoo", "-d", "db1", "-i", "hr", "--db_host=db", "--db_user=odoo", "--db_password=odoo" ]
+
+    - name: postgres:12.2
+      alias: db
+
   script:
-    - ./gradlew clean build
+    - ./gradlew test
+
+build:
+  image: openjdk:11
+  stage: build
+
+  script:
+    - ./gradlew clean jar
 
   artifacts:
     paths:
