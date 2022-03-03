@@ -18,7 +18,7 @@ import java.util.Set;
 public class BinaryTest {
 
     // Use attribute image_1920 for Odoo 14+
-    public static final String ATTR_IMAGE = "image_1920";
+    public static final String ATTR_IMAGE = "image";
 
     @Test
     public void testBinaryReadAndCreate() throws IOException {
