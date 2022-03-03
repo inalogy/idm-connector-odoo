@@ -25,6 +25,9 @@ test-odoo14:
     - name: postgres:12.2
       alias: db
 
+  script:
+    - ./gradlew test
+
 test-odoo10:
   image: openjdk:11
   stage: test
