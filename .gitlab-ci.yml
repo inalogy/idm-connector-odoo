@@ -74,6 +74,18 @@ test-odoo14:
   script:
     - ./gradlew test
 
+test-odoo15:
+  image: openjdk:11
+  stage: test
+  services:
+    - name: postgres:12.2
+      alias: db
+    - name: odoo:15
+      alias: odoo
+      entrypoint: [ "/entrypoint.sh", "odoo", "-d", "db1", "-i", "hr", "--db_host=db", "--db_user=odoo", "--db_password=odoo" ]
+  script:
+    - ./gradlew test
+
 build:
   image: openjdk:11
   stage: build
