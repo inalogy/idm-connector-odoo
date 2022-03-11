@@ -25,9 +25,9 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static lu.lns.connector.odoo.OdooConstants.*;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static lu.lns.connector.odoo.OdooConstants.*;
 
 /**
  * Performs create or update operations against odoo XML-RPC API.

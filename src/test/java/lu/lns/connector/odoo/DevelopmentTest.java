@@ -9,9 +9,9 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Map;
 
-import static lu.lns.connector.odoo.OdooConstants.*;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static lu.lns.connector.odoo.OdooConstants.*;
 
 /**
  * Not really unit tests, just for coding purpose.

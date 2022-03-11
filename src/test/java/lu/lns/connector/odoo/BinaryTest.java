@@ -11,9 +11,7 @@ import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 
-import java.io.IOException;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class BinaryTest {

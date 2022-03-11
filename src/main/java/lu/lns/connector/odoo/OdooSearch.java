@@ -38,10 +38,10 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static lu.lns.connector.odoo.OdooConstants.*;
 import static java.util.Arrays.asList;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
+import static lu.lns.connector.odoo.OdooConstants.*;
 
 /**
  * Performs a search query against odoo XML-RPC API.

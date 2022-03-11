@@ -10,9 +10,9 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import java.util.HashMap;
 import java.util.Map;
 
-import static lu.lns.connector.odoo.OdooConstants.*;
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
+import static lu.lns.connector.odoo.OdooConstants.*;
 
 /**
  * On-demand retrieval of odoo model and field information. Retrieved info will be cached until cache is evicted.
