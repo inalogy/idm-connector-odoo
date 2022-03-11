@@ -1,3 +1,6 @@
+before_script:
+  - export GRADLE_USER_HOME=`pwd`/.gradle
+
 variables:
   # Required for inter service communication
   FF_NETWORK_PER_BUILD: "TRUE"
@@ -6,20 +9,88 @@ variables:
   POSTGRES_USER: "odoo"
   POSTGRES_PASSWORD: "odoo"
 
-build:
+cache:
+  paths:
+    - .gradle
+    - .m2
+
+test-odoo10:
   image: openjdk:11
-  stage: build
+  stage: test
   services:
+    - name: postgres:12.2
+      alias: db
+    - name: odoo:10
+      alias: odoo
+      entrypoint: [ "/entrypoint.sh", "odoo", "-d", "db1", "-i", "hr", "--db_host=db", "--db_user=odoo", "--db_password=odoo" ]
+  script:
+    - ./gradlew test
+
+test-odoo11:
+  image: openjdk:11
+  stage: test
+  services:
+    - name: postgres:12.2
+      alias: db
+    - name: odoo:11
+      alias: odoo
+      entrypoint: [ "/entrypoint.sh", "odoo", "-d", "db1", "-i", "hr", "--db_host=db", "--db_user=odoo", "--db_password=odoo" ]
+  script:
+    - ./gradlew test
+
+test-odoo12:
+  image: openjdk:11
+  stage: test
+  services:
+    - name: postgres:12.2
+      alias: db
+    - name: odoo:12
+      alias: odoo
+      entrypoint: [ "/entrypoint.sh", "odoo", "-d", "db1", "-i", "hr", "--db_host=db", "--db_user=odoo", "--db_password=odoo" ]
+  script:
+    - ./gradlew test
+
+test-odoo13:
+  image: openjdk:11
+  stage: test
+  services:
+    - name: postgres:12.2
+      alias: db
+    - name: odoo:13
+      alias: odoo
+      entrypoint: [ "/entrypoint.sh", "odoo", "-d", "db1", "-i", "hr", "--db_host=db", "--db_user=odoo", "--db_password=odoo" ]
+  script:
+    - ./gradlew test
+
+test-odoo14:
+  image: openjdk:11
+  stage: test
+  services:
+    - name: postgres:12.2
+      alias: db
     - name: odoo:14
       alias: odoo
       entrypoint: [ "/entrypoint.sh", "odoo", "-d", "db1", "-i", "hr", "--db_host=db", "--db_user=odoo", "--db_password=odoo" ]
+  script:
+    - ./gradlew test
 
+test-odoo15:
+  image: openjdk:11
+  stage: test
+  services:
     - name: postgres:12.2
       alias: db
-
+    - name: odoo:15
+      alias: odoo
+      entrypoint: [ "/entrypoint.sh", "odoo", "-d", "db1", "-i", "hr", "--db_host=db", "--db_user=odoo", "--db_password=odoo" ]
   script:
-    - ./gradlew clean build
+    - ./gradlew test
 
+build:
+  image: openjdk:11
+  stage: build
+  script:
+    - ./gradlew clean jar
   artifacts:
     paths:
       - build/libs/*.jar

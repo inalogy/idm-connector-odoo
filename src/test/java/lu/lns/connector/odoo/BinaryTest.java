@@ -13,15 +13,17 @@ import org.junit.jupiter.api.Assertions;
 
 import java.io.IOException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class BinaryTest {
 
     // Use attribute image_1920 for Odoo 14+
-    public static final String ATTR_IMAGE = "image_1920";
+    public static final String ATTR_IMAGE_V10 = "image";
+    public static final String ATTR_IMAGE_V14 = "image_1920";
 
     @Test
-    public void testBinaryReadAndCreate() throws IOException {
+    public void testBinaryReadAndCreate() {
         TestConnectorFactory connectorFactory = new TestConnectorFactory();
         OdooConnector connector = connectorFactory.getOdooConnector();
         ObjectClass oc = new ObjectClass("hr.employee");
@@ -33,14 +35,21 @@ public class BinaryTest {
         Assertions.assertEquals(1, results.getConnectorObjects().size());
         ConnectorObject employee1 = results.getConnectorObjects().get(0);
 
-        Attribute image = employee1.getAttributeByName(ATTR_IMAGE);
+        String imageAttributeName = ATTR_IMAGE_V10;
+        Attribute imageAttribute = employee1.getAttributeByName(imageAttributeName);
+
+        if (imageAttribute == null) {
+            imageAttributeName = ATTR_IMAGE_V14;
+        }
+
+        Attribute image = employee1.getAttributeByName(imageAttributeName);
         Object jpgdata = image.getValue().get(0);
 
         // Create a new employee with the same image
 
         Set<Attribute> attrs = new HashSet<>();
         attrs.add(AttributeBuilder.build("name", "Yannick"));
-        attrs.add(AttributeBuilder.build(ATTR_IMAGE, jpgdata));
+        attrs.add(AttributeBuilder.build(imageAttributeName, jpgdata));
         Uid uid = connector.create(oc, attrs, oo);
 
         // Read the new employee to ensure image is the same
@@ -48,8 +57,8 @@ public class BinaryTest {
         Assertions.assertEquals(2, results.getConnectorObjects().size());
         ConnectorObject employee2 = results.getConnectorObjects().get(1);
 
-        byte[] image1 = (byte[]) employee1.getAttributeByName(ATTR_IMAGE).getValue().get(0);
-        byte[] image2 = (byte[]) employee2.getAttributeByName(ATTR_IMAGE).getValue().get(0);
+        byte[] image1 = (byte[]) employee1.getAttributeByName(imageAttributeName).getValue().get(0);
+        byte[] image2 = (byte[]) employee2.getAttributeByName(imageAttributeName).getValue().get(0);
 
         // Save files for debugging purposes
         // Files.write(Paths.get("/tmp/image1.jpg"), image1);
