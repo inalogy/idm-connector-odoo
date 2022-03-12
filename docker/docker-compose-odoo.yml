@@ -15,8 +15,6 @@ services:
 
   db-odoo_10:
     image: postgres:12.2
-    ports:
-      - 15434:5432
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=odoo
@@ -40,8 +38,6 @@ services:
 
   db-odoo_11:
     image: postgres:12.2
-    ports:
-      - 15435:5432
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=odoo
@@ -63,8 +59,6 @@ services:
 
   db-odoo_12:
     image: postgres:12.2
-    ports:
-      - 15436:5432
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=odoo
@@ -86,8 +80,6 @@ services:
 
   db-odoo_13:
     image: postgres:12.2
-    ports:
-      - 15437:5432
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=odoo
@@ -109,8 +101,6 @@ services:
 
   db-odoo_14:
     image: postgres:12.2
-    ports:
-      - 15438:5432
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=odoo
@@ -118,6 +108,27 @@ services:
       - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
     volumes:
       - pg_odoo_data_14:/var/lib/postgresql/data
+
+  odoo_15:
+    image: odoo:15
+    depends_on:
+      - db-odoo_15
+    ports:
+      - 15082:8069
+    environment:
+      - HOST=db-odoo_15
+      - USER=odoo
+      - PASSWORD=odoo
+
+  db-odoo_15:
+    image: postgres:12.2
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=odoo
+      - POSTGRES_PASSWORD=odoo
+      - POSTGRES_INITDB_ARGS=--lc-collate=en_US.utf8 --lc-ctype=en_US.utf8
+    volumes:
+      - pg_odoo_data_15:/var/lib/postgresql/data
 
 volumes:
   pg_odoo_data_10:
@@ -129,6 +140,8 @@ volumes:
   pg_odoo_data_13:
     driver: local
   pg_odoo_data_14:
+    driver: local
+  pg_odoo_data_15:
     driver: local
 
 networks:
