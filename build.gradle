@@ -16,7 +16,7 @@ java {
 }
 
 group 'lu.lns'
-version '1.0.0-RC1'
+version '1.0.0'
 
 configurations {
     includeInJar
