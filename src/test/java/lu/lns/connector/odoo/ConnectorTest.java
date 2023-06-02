@@ -1,5 +1,6 @@
 package lu.lns.connector.odoo;
 
+import org.apache.xmlrpc.XmlRpcException;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -248,7 +249,7 @@ public class ConnectorTest {
         }
         catch (ConnectorException e) {
             assertTrue("expected to fail because of required attribute missing; message=" + e.getMessage(),
-                    e.getMessage().contains("cannot create a new user from here"));
+                    e.getCause() instanceof XmlRpcException);
         }
 
         // search related record and verify that it was not rolled back
