@@ -5,6 +5,7 @@ import lu.lns.connector.odoo.schema.OdooModel;
 import lu.lns.connector.odoo.schema.type.MultiValueOdooType;
 import lu.lns.connector.odoo.schema.type.OdooManyToOneType;
 import org.identityconnectors.common.logging.Log;
+import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
 import org.identityconnectors.framework.common.objects.Attribute;
@@ -20,6 +21,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -115,6 +117,17 @@ public class OdooWrite {
         }
     }
 
+    private String extractPasswordFromGuardedString(GuardedString guardedString) {
+        final List<String> passwordList = new ArrayList<>();
+        guardedString.access(new GuardedString.Accessor() {
+            @Override
+            public void access(char[] passwordChars) {
+                passwordList.add(new String(passwordChars));
+            }
+        });
+        return passwordList.get(0);
+    }
+
     private Uid internalCreateRecord(OdooModel model, Set<Attribute> createAttributes) {
         Map<String, Object> fields = new HashMap<>();
 
@@ -123,13 +136,29 @@ public class OdooWrite {
                 // we ignore these attributes as they are the ID of the record to be created in odoo
                 continue;
             }
-//
+
+            Object val;
+            //Checking if password is GuardedString and if so than decrypting it
+            if (attr.getName().equals("__PASSWORD__")) {
+                String password;
+                if (attr.getValue() != null && !attr.getValue().isEmpty()) {
+                    List<Object> valueToChange = attr.getValue();
+                    GuardedString guardedPassword = (GuardedString) valueToChange.get(0);
+                    password = extractPasswordFromGuardedString(guardedPassword);
+                    val = password;
+                } else {
+                    val = null;
+                }
+
+                fields.put("password", val);
+                continue;
+            }
+
             OdooField field = model.getField(attr.getName());
             if (field == null) {
                 throw new ConnectorException("Did not find odoo field with name '" + attr.getName() + "' in odoo model.");
             }
 
-            Object val;
             if (field.getType() instanceof MultiValueOdooType) {
                 val = attr.getValue();
             }
@@ -358,13 +387,30 @@ public class OdooWrite {
                 continue;
             }
 
+            Object val;
+            //Checking if password is GuardedString and if so than decrypting it
+            if (delta.getName().equals("__PASSWORD__")) {
+                String password ;
+                if (delta.getValuesToReplace() != null && !delta.getValuesToReplace().isEmpty()) {
+                    List<Object> valueToChange = delta.getValuesToReplace();
+                    GuardedString guardedPassword = (GuardedString) valueToChange.get(0);
+                    password = extractPasswordFromGuardedString(guardedPassword);
+                    val = password;
+                } else {
+                    val = null;
+                }
+
+                fields.put("password", val);
+                continue;
+            }
+
             OdooField field = model.getField(delta.getName());
             if (field == null) {
                 throw new ConnectorException("Did not find odoo field with name '" + delta.getName() + "' in odoo model.");
             }
 
             if (delta.getValuesToReplace() != null) {
-                Object val;
+
 
                 if (field.getType() instanceof MultiValueOdooType) {
                     // multi-value mapped as a whole
@@ -385,7 +431,7 @@ public class OdooWrite {
             }
             else if (field.getType() instanceof MultiValueOdooType) {
                 MultiValueOdooType mv = (MultiValueOdooType) field.getType();
-                Object val = mv.mapToOdooUpdateRecordDeltaValue(delta.getValuesToAdd(), delta.getValuesToRemove());
+                val = mv.mapToOdooUpdateRecordDeltaValue(delta.getValuesToAdd(), delta.getValuesToRemove());
 
                 fields.put(field.getName(), val);
             }
