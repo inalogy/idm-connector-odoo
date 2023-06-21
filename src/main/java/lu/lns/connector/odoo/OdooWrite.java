@@ -123,7 +123,7 @@ public class OdooWrite {
                 // we ignore these attributes as they are the ID of the record to be created in odoo
                 continue;
             }
-
+//
             OdooField field = model.getField(attr.getName());
             if (field == null) {
                 throw new ConnectorException("Did not find odoo field with name '" + attr.getName() + "' in odoo model.");
