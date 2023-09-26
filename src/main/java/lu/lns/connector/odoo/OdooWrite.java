@@ -285,7 +285,7 @@ public class OdooWrite {
                     OdooField field = model.getField(entry.getKey());
                     OdooManyToOneType type = (OdooManyToOneType) field.getType();
                     OdooModel relatedModel = cache.getModel(type.getRelatedModel());
-                    Integer relatedId = (Integer) relations.get(entry.getKey());
+                    Integer relatedId = Integer.valueOf((String) relations.get(entry.getKey()));
 
                     // remember state of related record before the update for potential rollback on exception
                     Map<String, Object> relatedRecordBeforeUpdate = readRecord(relatedModel, relatedId,

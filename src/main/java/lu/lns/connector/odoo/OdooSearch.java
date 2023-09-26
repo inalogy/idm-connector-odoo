@@ -156,7 +156,7 @@ public class OdooSearch {
         for (var entry : relationToRetrievalAttributesMap.entrySet()) {
             OdooField field = model.getField(entry.getKey());
             OdooModel relatedModel = cache.getModel(((OdooManyToOneType) field.getType()).getRelatedModel());
-            Integer relatedId = (Integer) field.getType().mapToConnIdValue(record.get(entry.getKey()), field);
+            String relatedId = (String) field.getType().mapToConnIdValue(record.get(entry.getKey()), field);
 
             if (relatedId != null) {
                 Map<String, Object> params = Map.of(OPERATION_PARAMETER_FIELDS, entry.getValue());
