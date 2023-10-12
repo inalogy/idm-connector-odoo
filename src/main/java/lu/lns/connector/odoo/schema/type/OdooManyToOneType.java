@@ -52,6 +52,9 @@ public class OdooManyToOneType extends OdooRelationType {
         else if (attributeValueFromConnId instanceof String) {
             return Integer.valueOf((String) attributeValueFromConnId);
         }
+        else if (attributeValueFromConnId instanceof Integer) {
+            return attributeValueFromConnId;
+        }
         else if (attributeValueFromConnId instanceof List) {
             // As we converted these relation fields to Strings for midPoint, now we need to convert them back to Integers
             List<Integer> ids = ((List<?>) attributeValueFromConnId).stream().map(Integer.class::cast).collect(Collectors.toList());
