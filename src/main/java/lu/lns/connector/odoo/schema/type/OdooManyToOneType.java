@@ -2,7 +2,10 @@ package lu.lns.connector.odoo.schema.type;
 
 import lu.lns.connector.odoo.OdooConstants;
 import lu.lns.connector.odoo.schema.OdooField;
+import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -39,6 +42,22 @@ public class OdooManyToOneType extends OdooRelationType {
             }
         }
         return super.mapToConnIdValue(valueFromXmlRpc, context);
+    }
+
+    @Override
+    public Object mapToOdooValue(Object attributeValueFromConnId) {
+        if (attributeValueFromConnId == null) {
+            return null;
+        }
+        else if (attributeValueFromConnId instanceof String) {
+            return Integer.valueOf((String) attributeValueFromConnId);
+        }
+        else if (attributeValueFromConnId instanceof List) {
+            // As we converted these relation fields to Strings for midPoint, now we need to convert them back to Integers
+            List<Integer> ids = ((List<?>) attributeValueFromConnId).stream().map(Integer.class::cast).collect(Collectors.toList());
+            return Collections.singletonList(ids);
+        }
+        throw new InvalidAttributeValueException("Unexpected connId value for many2one type: Expects null or list of integer IDs");
     }
 
     public String getRelatedModel() {
