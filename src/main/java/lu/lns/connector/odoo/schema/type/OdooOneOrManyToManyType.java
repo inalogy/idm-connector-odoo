@@ -38,7 +38,7 @@ public class OdooOneOrManyToManyType extends OdooRelationType implements MultiVa
         }
         else if (attributeValueFromConnId instanceof List) {
             // As we converted these relation fields to Strings for midPoint, now we need to convert them back to Integers
-            List<Integer> ids = ((List<?>) attributeValueFromConnId).stream().map(Integer.class::cast).collect(Collectors.toList());
+            List<Integer> ids = ((List<?>) attributeValueFromConnId).stream().map(String::valueOf).map(Integer::valueOf).collect(Collectors.toList());
             return Collections.singletonList(OdooConstants.getX2ManyWriteCommandReplaceAll(ids));
         }
         throw new InvalidAttributeValueException("Unexpected connId value for *2many type: Expects null or list of integer IDs");
