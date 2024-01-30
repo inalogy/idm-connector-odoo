@@ -34,11 +34,16 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static lu.lns.connector.odoo.Constants.MODEL_FIELD_SEPARATOR;
 import static lu.lns.connector.odoo.OdooConstants.MODEL_NAME_MODELS;
@@ -151,7 +156,7 @@ public class ConnectorTest {
 
         // search related "res.partner" record and verify
         assertNotNull("relation attribute not filled", result.getAttributeByName("partner_id"));
-        Integer relatedId = (Integer) result.getAttributeByName("partner_id").getValue().iterator().next();
+        String relatedId = (String) result.getAttributeByName("partner_id").getValue().iterator().next();
 
         results = new TestResultsHandler();
         connector.executeQuery(new ObjectClass("res.partner"), new EqualsFilter(new Uid(relatedId.toString())), results, oo);
@@ -220,7 +225,7 @@ public class ConnectorTest {
         results = new TestResultsHandler();
         connector.executeQuery(oc, new EqualsFilter(uid), results, oo);
         ConnectorObject updatedObj = results.getConnectorObjects().iterator().next();
-        Integer userId = (Integer) assertAttributeNotNull("expected user_id to be created", updatedObj, "user_id");
+        String userId = (String) assertAttributeNotNull("expected user_id to be created", updatedObj, "user_id");
         assertTrue("expect user_id in modified attributes in return value of updateDelta",
                 modified != null && modified.size() == 1 && modified.iterator().next().getName().equals("user_id"));
 
@@ -335,6 +340,9 @@ public class ConnectorTest {
 
         // create groups
         int[] groups = createGroups();
+        HashSet<String> groupsSet = Arrays.stream(groups).boxed()
+                .map(Object::toString)
+                .collect(Collectors.toCollection(HashSet<String>::new));
 
         // create a user with groups relation specified
         String login = "test" + System.currentTimeMillis();
@@ -353,15 +361,17 @@ public class ConnectorTest {
 
         TestResultsHandler results = new TestResultsHandler();
         connector.executeQuery(oc, new EqualsFilter(AttributeBuilder.build("name", name)), results, oo);
-        assertEquals("expect 3rd/4th groups to be added", Set.of(groups[0], groups[1], groups[2], groups[3]), new HashSet<>(
+        assertEquals("expect 3rd/4th groups to be added", groupsSet, new HashSet<>(
                 results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
 
         // remove a reference
         connector.updateDelta(oc, uid, Set.of(new AttributeDeltaBuilder().setName("groups_id").addValueToRemove(groups[2]).build()), oo);
+        // remove it from groupsSet as well
+        groupsSet.remove(Integer.toString(groups[2]));
 
         results = new TestResultsHandler();
         connector.executeQuery(oc, new EqualsFilter(AttributeBuilder.build("name", name)), results, oo);
-        assertEquals("expect 3rd group to be removed", Set.of(groups[0], groups[1], groups[3]), new HashSet<>(
+        assertEquals("expect 3rd group to be removed", groupsSet, new HashSet<>(
                 results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
     }
 

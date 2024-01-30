@@ -3,11 +3,13 @@ package lu.lns.connector.odoo.schema.type;
 import lu.lns.connector.odoo.OdooConstants;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * Special type mapping of an odoo relational record field that has a target cardinality of n.
@@ -20,9 +22,11 @@ public class OdooOneOrManyToManyType extends OdooRelationType implements MultiVa
     @Override
     protected Optional<Object> mapToConnIdValue(Object valueFromXmlRpc) {
         if (valueFromXmlRpc instanceof Object[]) {
-            // expecting integer ID array
-            Object[] ids = (Object[]) valueFromXmlRpc;
-            return Optional.of(Arrays.asList(ids));
+            // expecting integer ID array represented as Object[], we need to
+            // manually convert them to String[] so why not directly to List<String>
+            return Optional.of(Stream.of((Object[]) valueFromXmlRpc).map(
+                    (Object obj) -> Objects.toString(obj, null)
+            ).collect(Collectors.toList()));
         }
         return super.mapToConnIdValue(valueFromXmlRpc);
     }
@@ -33,7 +37,8 @@ public class OdooOneOrManyToManyType extends OdooRelationType implements MultiVa
             return Collections.singletonList(OdooConstants.getX2ManyWriteCommandReplaceAll(Collections.emptyList()));
         }
         else if (attributeValueFromConnId instanceof List) {
-            List<Integer> ids = (List<Integer>) attributeValueFromConnId;
+            // As we converted these relation fields to Strings for midPoint, now we need to convert them back to Integers
+            List<Integer> ids = ((List<?>) attributeValueFromConnId).stream().map(String::valueOf).map(Integer::valueOf).collect(Collectors.toList());
             return Collections.singletonList(OdooConstants.getX2ManyWriteCommandReplaceAll(ids));
         }
         throw new InvalidAttributeValueException("Unexpected connId value for *2many type: Expects null or list of integer IDs");
