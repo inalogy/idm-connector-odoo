@@ -2,17 +2,21 @@ package lu.lns.connector.odoo;
 
 import lu.lns.connector.odoo.schema.OdooField;
 import lu.lns.connector.odoo.schema.OdooModel;
+import lu.lns.connector.odoo.schema.type.OdooDateTimeType;
 import lu.lns.connector.odoo.schema.type.OdooManyToOneType;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
+import org.identityconnectors.framework.common.objects.ConnectorObject;
 import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.Name;
 import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.SortKey;
+import org.identityconnectors.framework.common.objects.SyncDeltaBuilder;
+import org.identityconnectors.framework.common.objects.SyncDeltaType;
 import org.identityconnectors.framework.common.objects.SyncResultsHandler;
 import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
@@ -34,9 +38,13 @@ import org.identityconnectors.framework.common.objects.filter.StartsWithFilter;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -341,7 +349,69 @@ public class OdooSearch {
     }
 
     public void modelsSync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions, Log log) {
+        log.info("syncUser, token: {0}, options: {1}", syncToken, operationOptions);
+        Object lastSyncDate = null;
+        if (syncToken != null) {
+            lastSyncDate = syncToken.getValue().toString();
 
+        }
+
+        SyncDeltaBuilder deltaBuilder = new SyncDeltaBuilder();
+        SyncToken deltaToken = getLatestSyncToken(objectClass,log);
+        SyncDeltaType deltaType = null;
+
+        OdooModel model = cache.getModel(objectClass);
+
+        Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ,Collections.emptyList());
+
+
+        ConnectorObject connectorObject = null;
+        boolean shouldContinue = true;
+
+        if (results.length > 0){
+            deltaBuilder.setToken(deltaToken);
+        }
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        for (Object resultObj : results) {
+            Map<String, Object> resultMap = (Map<String, Object>) resultObj;
+            Object lastUpdate = resultMap.get("__last_update");
+            try {
+                if (lastUpdate == null || (lastSyncDate != null &&
+                        dateFormat.parse(lastSyncDate.toString()).compareTo(dateFormat.parse(lastUpdate.toString())) >= 0)) {
+                    continue;
+                }
+            }
+            catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+            Map<String, Object> result = (Map<String, Object>) resultObj;
+
+            ConnectorObjectBuilder connObj = new ConnectorObjectBuilder();
+            String id = Integer.toString((int) result.get(MODEL_FIELD_FIELD_NAME_ID));
+            connObj.setUid(id);
+            connObj.setName(id);
+            connObj.setObjectClass(new ObjectClass(model.getName()));
+
+            for (var entry : result.entrySet()) {
+                mapResultField(model, "", entry, connObj);
+            }
+
+            connectorObject = connObj.build();
+
+            deltaType = SyncDeltaType.CREATE_OR_UPDATE;
+
+            deltaBuilder.setObject(connectorObject);
+            deltaBuilder.setUid(connectorObject.getUid());
+
+            deltaBuilder.setDeltaType(deltaType);
+
+            shouldContinue = syncResultsHandler.handle(deltaBuilder.build());
+            if (!shouldContinue) {
+                break;
+            }
+        }
     }
 
     public SyncToken getLatestSyncToken(ObjectClass objectClass,Log log) {
