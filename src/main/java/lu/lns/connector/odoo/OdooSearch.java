@@ -3,7 +3,9 @@ package lu.lns.connector.odoo;
 import lu.lns.connector.odoo.schema.OdooField;
 import lu.lns.connector.odoo.schema.OdooModel;
 import lu.lns.connector.odoo.schema.type.OdooManyToOneType;
+import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
+import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
 import org.identityconnectors.framework.common.objects.Name;
@@ -11,6 +13,8 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.SortKey;
+import org.identityconnectors.framework.common.objects.SyncResultsHandler;
+import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.AndFilter;
 import org.identityconnectors.framework.common.objects.filter.AttributeFilter;
@@ -19,6 +23,7 @@ import org.identityconnectors.framework.common.objects.filter.ContainsFilter;
 import org.identityconnectors.framework.common.objects.filter.EndsWithFilter;
 import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 import org.identityconnectors.framework.common.objects.filter.Filter;
+import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
 import org.identityconnectors.framework.common.objects.filter.GreaterThanFilter;
 import org.identityconnectors.framework.common.objects.filter.GreaterThanOrEqualFilter;
 import org.identityconnectors.framework.common.objects.filter.LessThanFilter;
@@ -27,6 +32,8 @@ import org.identityconnectors.framework.common.objects.filter.NotFilter;
 import org.identityconnectors.framework.common.objects.filter.OrFilter;
 import org.identityconnectors.framework.common.objects.filter.StartsWithFilter;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
@@ -63,10 +70,12 @@ public class OdooSearch {
 
     private OdooClient client;
     private OdooModelCache cache;
+    private OdooModelNameMatcher liveSyncModels;
 
-    public OdooSearch(OdooClient client, OdooModelCache cache) {
+    public OdooSearch(OdooClient client, OdooModelCache cache,OdooConfiguration configuration) {
         this.client = client;
         this.cache = cache;
+        this.liveSyncModels = new OdooModelNameMatcher(configuration.getRetrieveModels(), false);
     }
 
     /**
@@ -330,5 +339,51 @@ public class OdooSearch {
         }
         return attributeNameFromConnId;
     }
+
+    public void modelsSync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions, Log log) {
+
+    }
+
+    public SyncToken getLatestSyncToken(ObjectClass objectClass,Log log) {
+        log.info("check the ObjectClass");
+        if (objectClass == null || !this.liveSyncModels.matches(objectClass.getObjectClassValue())) {
+            throw new IllegalArgumentException("Provided object class is not supported");
+        }
+        log.ok("The object class is ok");
+
+        OdooModel model = cache.getModel(objectClass);
+
+        Map<String, Object> options = new HashMap<>();
+        options.put("fields", Arrays.asList("__last_update"));
+
+        // execute search in odoo (return only id and __last_update date for every user)
+        Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ, Collections.emptyList(), options);
+
+        log.info("Number of returned users is:"+results.length);
+
+        Object maxLastUpdate = null;
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        // Iterate through the results to find the maximum date
+        for (Object result : results) {
+            // Assuming result is a Map
+            Map<String, Object> resultMap = (Map<String, Object>) result;
+            Object lastUpdate = resultMap.get("__last_update");
+            try {
+                if (lastUpdate != null && (maxLastUpdate == null || dateFormat.parse(lastUpdate.toString()).compareTo(dateFormat.parse(maxLastUpdate.toString())) > 0)) {
+                    maxLastUpdate = lastUpdate;
+                }
+            }
+            catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        log.info("Maximum last update date: " + maxLastUpdate);
+
+        return new SyncToken(maxLastUpdate);
+    }
+
+
 
 }

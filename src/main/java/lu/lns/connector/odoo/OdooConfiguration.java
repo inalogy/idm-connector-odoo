@@ -19,6 +19,8 @@ public class OdooConfiguration extends AbstractConfiguration {
     private String username;
     private GuardedString password;
     private String retrieveModels;
+
+    private String liveSyncModels;
     private String expandRelations;
 
     public OdooConfiguration() {
@@ -31,6 +33,7 @@ public class OdooConfiguration extends AbstractConfiguration {
         this.password = other.password;
         this.retrieveModels = other.retrieveModels;
         this.expandRelations = other.expandRelations;
+        this.liveSyncModels = other.liveSyncModels;
     }
 
     private void required(String fieldName, String field) {
@@ -134,5 +137,17 @@ public class OdooConfiguration extends AbstractConfiguration {
         this.expandRelations = expandRelations;
     }
 
+    @ConfigurationProperty(
+            displayMessageKey = "odoo.config.models.livesync",
+            helpMessageKey = "odoo.config.models.livesync.help",
+            groupMessageKey = "odoo.config.group.schema",
+            order = 15)
+    public String getLiveSyncModels() {
+        return liveSyncModels;
+    }
+
+    public void setLiveSyncModels(String retrieveModels) {
+        this.liveSyncModels = liveSyncModels;
+    }
 }
 

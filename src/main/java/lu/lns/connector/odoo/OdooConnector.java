@@ -8,6 +8,8 @@ import org.identityconnectors.framework.common.objects.ObjectClass;
 import org.identityconnectors.framework.common.objects.OperationOptions;
 import org.identityconnectors.framework.common.objects.ResultsHandler;
 import org.identityconnectors.framework.common.objects.Schema;
+import org.identityconnectors.framework.common.objects.SyncResultsHandler;
+import org.identityconnectors.framework.common.objects.SyncToken;
 import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.common.objects.filter.Filter;
 import org.identityconnectors.framework.common.objects.filter.FilterTranslator;
@@ -18,6 +20,7 @@ import org.identityconnectors.framework.spi.operations.CreateOp;
 import org.identityconnectors.framework.spi.operations.DeleteOp;
 import org.identityconnectors.framework.spi.operations.SchemaOp;
 import org.identityconnectors.framework.spi.operations.SearchOp;
+import org.identityconnectors.framework.spi.operations.SyncOp;
 import org.identityconnectors.framework.spi.operations.TestOp;
 import org.identityconnectors.framework.spi.operations.UpdateDeltaOp;
 
@@ -34,7 +37,7 @@ import static java.util.Collections.singletonList;
  * https://docs.evolveum.com/connectors/connid/1.x/connector-development-guide/
  */
 @ConnectorClass(displayNameKey = "odoo.connector.display", configurationClass = OdooConfiguration.class)
-public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, SearchOp<Filter>, TestOp, SchemaOp, UpdateDeltaOp {
+public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, SearchOp<Filter>, TestOp, SchemaOp, UpdateDeltaOp, SyncOp {
 
     private static final Log LOG = Log.getLog(OdooConnector.class);
 
@@ -56,7 +59,7 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
         this.client = new OdooClient(configuration);
         this.cache = new OdooModelCache(client);
         this.schemaFetcher = new OdooSchema(client, configuration);
-        this.searcher = new OdooSearch(client, cache);
+        this.searcher = new OdooSearch(client, cache,configuration);
         this.writer = new OdooWrite(client, cache);
     }
 
@@ -136,6 +139,18 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
             searcher.search(model, query, handler, options);
             return null;
         });
+    }
+
+    @Override
+    public void sync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler,
+            OperationOptions operationOptions) {
+        searcher.modelsSync(objectClass,syncToken,syncResultsHandler,operationOptions,LOG);
+
+    }
+
+    @Override
+    public SyncToken getLatestSyncToken(ObjectClass objectClass) {
+        return searcher.getLatestSyncToken(objectClass,LOG);
     }
 
 }

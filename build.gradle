@@ -7,7 +7,7 @@ plugins {
 ext {
     connidVersion = '1.5.0.17'
     polygonVersion = '3.0.1'
-    connectorName = 'lu.lns.connector.odoo'
+    connectorName = 'lu.lns.connector.odoo.livesync'
 }
 
 java {
