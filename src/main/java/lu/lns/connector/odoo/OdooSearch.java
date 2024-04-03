@@ -358,6 +358,11 @@ public class OdooSearch {
 
         SyncDeltaBuilder deltaBuilder = new SyncDeltaBuilder();
         SyncToken deltaToken = getLatestSyncToken(objectClass,log);
+
+        if (deltaToken.equals(syncToken)){
+            return;
+        }
+
         SyncDeltaType deltaType = null;
 
         OdooModel model = cache.getModel(objectClass);
