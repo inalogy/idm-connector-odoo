@@ -19,7 +19,6 @@ public class OdooConfiguration extends AbstractConfiguration {
     private String username;
     private GuardedString password;
     private String retrieveModels;
-
     private String liveSyncModels;
     private String expandRelations;
 
@@ -146,8 +145,10 @@ public class OdooConfiguration extends AbstractConfiguration {
         return liveSyncModels;
     }
 
-    public void setLiveSyncModels(String retrieveModels) {
+    public void setLiveSyncModels(String liveSyncModels) {
         this.liveSyncModels = liveSyncModels;
     }
+
+
 }
 

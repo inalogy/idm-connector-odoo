@@ -144,13 +144,13 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
     @Override
     public void sync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler,
             OperationOptions operationOptions) {
-        searcher.modelsSync(objectClass,syncToken,syncResultsHandler,operationOptions,LOG);
+        searcher.modelsSync(objectClass,syncToken,syncResultsHandler,operationOptions,LOG,configuration);
 
     }
 
     @Override
     public SyncToken getLatestSyncToken(ObjectClass objectClass) {
-        return searcher.getLatestSyncToken(objectClass,LOG);
+        return searcher.getLatestSyncToken(objectClass,LOG,configuration);
     }
 
 }

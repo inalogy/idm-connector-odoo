@@ -348,8 +348,14 @@ public class OdooSearch {
         return attributeNameFromConnId;
     }
 
-    public void modelsSync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions, Log log) {
+    public void modelsSync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions, Log log,OdooConfiguration configuration) {
         log.info("syncUser, token: {0}, options: {1}", syncToken, operationOptions);
+
+        String syncAttr = getSyncAttribute(objectClass,configuration.getLiveSyncModels());
+        if (syncAttr == null){
+            throw new IllegalArgumentException("In configuration property is missing objectClass or sync attribute for this objectClass:"+ objectClass.getObjectClassValue());
+        }
+
         Object lastSyncDate = null;
         if (syncToken != null) {
             lastSyncDate = syncToken.getValue().toString();
@@ -357,7 +363,7 @@ public class OdooSearch {
         }
 
         SyncDeltaBuilder deltaBuilder = new SyncDeltaBuilder();
-        SyncToken deltaToken = getLatestSyncToken(objectClass,log);
+        SyncToken deltaToken = getLatestSyncToken(objectClass,log,configuration);
 
         if (deltaToken.equals(syncToken)){
             return;
@@ -381,7 +387,7 @@ public class OdooSearch {
 
         for (Object resultObj : results) {
             Map<String, Object> resultMap = (Map<String, Object>) resultObj;
-            Object lastUpdate = resultMap.get("__last_update");
+            Object lastUpdate = resultMap.get(syncAttr);
             try {
                 if (lastUpdate == null || (lastSyncDate != null &&
                         dateFormat.parse(lastSyncDate.toString()).compareTo(dateFormat.parse(lastUpdate.toString())) >= 0)) {
@@ -419,17 +425,18 @@ public class OdooSearch {
         }
     }
 
-    public SyncToken getLatestSyncToken(ObjectClass objectClass,Log log) {
+    public SyncToken getLatestSyncToken(ObjectClass objectClass,Log log,OdooConfiguration configuration) {
         log.info("check the ObjectClass");
-        if (objectClass == null || !this.liveSyncModels.matches(objectClass.getObjectClassValue())) {
-            throw new IllegalArgumentException("Provided object class is not supported");
+        String syncAttr = getSyncAttribute(objectClass,configuration.getLiveSyncModels());
+        if (syncAttr == null){
+            throw new IllegalArgumentException("In configuration property is missing sync attribute for this objectClass:"+ objectClass.getObjectClassValue());
         }
         log.ok("The object class is ok");
 
         OdooModel model = cache.getModel(objectClass);
 
         Map<String, Object> options = new HashMap<>();
-        options.put("fields", Arrays.asList("__last_update"));
+        options.put("fields", Arrays.asList(syncAttr));
 
         // execute search in odoo (return only id and __last_update date for every user)
         Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ, Collections.emptyList(), options);
@@ -443,7 +450,7 @@ public class OdooSearch {
         for (Object result : results) {
             // Assuming result is a Map
             Map<String, Object> resultMap = (Map<String, Object>) result;
-            Object lastUpdate = resultMap.get("__last_update");
+            Object lastUpdate = resultMap.get(syncAttr);
             try {
                 if (lastUpdate != null && (maxLastUpdate == null || dateFormat.parse(lastUpdate.toString()).compareTo(dateFormat.parse(maxLastUpdate.toString())) > 0)) {
                     maxLastUpdate = lastUpdate;
@@ -459,6 +466,21 @@ public class OdooSearch {
         return new SyncToken(maxLastUpdate);
     }
 
+    private String getSyncAttribute(ObjectClass objectClass, String liveSyncSynchronizationAttribute) {
+        if (objectClass == null || liveSyncSynchronizationAttribute == null) {
+            throw new IllegalArgumentException("Provided object class or synchronization attribute is null");
+        }
+
+        String[] attributes = liveSyncSynchronizationAttribute.split(",");
+        for (String attribute : attributes) {
+            String[] parts = attribute.split("/");
+            if (parts.length == 2 && parts[0].trim().equals(objectClass.getObjectClassValue())) {
+                return parts[1].trim();
+            }
+        }
+
+        return null;
+    }
 
 
 }
