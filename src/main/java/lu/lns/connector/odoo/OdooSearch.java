@@ -99,6 +99,16 @@ public class OdooSearch {
                 Objects.requireNonNullElse(options.getAttributesToGet(), new String[0]))
                 .anyMatch(a -> a.contains(Constants.MODEL_FIELD_SEPARATOR));
 
+        // execute getFields in odoo
+        if(query == null){
+            Map<String, Map<String, Object>> fieldsMetadata = client.fetchFieldsMetadata(model.getName());
+            if (fieldsMetadata != null){
+                params.put("fields", fieldsMetadata.keySet().stream()
+                        .filter(fieldName -> !fieldName.equals("picture"))
+                        .collect(Collectors.toList()));
+            }
+        }
+
         // execute search in odoo
         Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ, filter, params);
 

@@ -16,8 +16,10 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Encapsulates the XML-RPC client to communicate with odoo. Also handles authentication to the API automatically.
@@ -127,6 +129,31 @@ public class OdooClient {
         params.addAll(Arrays.asList(operationParameters));
 
         return executeOperation(() -> client.execute("execute_kw", params));
+    }
+
+    public Map<String, Map<String, Object>> fetchFieldsMetadata(String modelName) {
+        try {
+            GuardedStringAccessor accessorSecret = new GuardedStringAccessor();
+            configuration.getPassword().access(accessorSecret);
+
+            List<Object> params = new LinkedList<>();
+            params.add(configuration.getDatabase());
+            params.add(authenticationToken);
+            params.add(new String(accessorSecret.getClearChars()));
+            params.add(modelName); // Model name for which fields metadata is requested
+            params.add("fields_get"); // Operation name for fields_get
+            params.add(Collections.emptyList()); // No filters for fields_get
+            params.add(new HashMap<>()); // Empty map for additional params
+
+            // Execute operation
+            Map<String, Map<String, Object>> fieldsMetadata = (Map<String, Map<String, Object>>) client.execute("execute_kw", params);
+            return fieldsMetadata;
+
+        } catch (Exception e) {
+            // Handle exceptions
+            e.printStackTrace();
+            return null;
+        }
     }
 
     /**

@@ -32,6 +32,7 @@ public final class OdooConstants {
     public final static String OPERATION_CREATE = "create";
     public final static String OPERATION_UPDATE = "write";
     public final static String OPERATION_DELETE = "unlink";
+    public final static String OPERATION_FIELDS_GET = "fields_get";
 
     public final static String OPERATION_PARAMETER_FIELDS = "fields";
     public final static String OPERATION_PARAMETER_OFFSET = "offset";
