@@ -358,7 +358,7 @@ public class OdooSearch {
         return attributeNameFromConnId;
     }
 
-    public void modelsSync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions, Log log,OdooConfiguration configuration) {
+    public void modelsSync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions, Log log,OdooConfiguration configuration,OdooModel model) {
         log.info("syncUser, token: {0}, options: {1}", syncToken, operationOptions);
 
         String syncAttr = getSyncAttribute(objectClass,configuration.getLiveSyncModels());
@@ -373,7 +373,7 @@ public class OdooSearch {
         }
 
         SyncDeltaBuilder deltaBuilder = new SyncDeltaBuilder();
-        SyncToken deltaToken = getLatestSyncToken(objectClass,log,configuration);
+        SyncToken deltaToken = getLatestSyncToken(objectClass,log,configuration,model);
 
         if (deltaToken.equals(syncToken)){
             return;
@@ -381,9 +381,16 @@ public class OdooSearch {
 
         SyncDeltaType deltaType = null;
 
-        OdooModel model = cache.getModel(objectClass);
+        // execute getFields in odoo
+        Map<String, Object> options = new HashMap<>();
+        Map<String, Map<String, Object>> fieldsMetadata = client.fetchFieldsMetadata(model.getName());
+        if (fieldsMetadata != null){
+            options.put("fields", fieldsMetadata.keySet().stream()
+                    .filter(fieldName -> !fieldName.equals("picture"))
+                    .collect(Collectors.toList()));
+        }
 
-        Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ,Collections.emptyList());
+        Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ,Collections.emptyList(),options);
 
 
         ConnectorObject connectorObject = null;
@@ -435,15 +442,13 @@ public class OdooSearch {
         }
     }
 
-    public SyncToken getLatestSyncToken(ObjectClass objectClass,Log log,OdooConfiguration configuration) {
+    public SyncToken getLatestSyncToken(ObjectClass objectClass,Log log,OdooConfiguration configuration,OdooModel model) {
         log.info("check the ObjectClass");
         String syncAttr = getSyncAttribute(objectClass,configuration.getLiveSyncModels());
         if (syncAttr == null){
             throw new IllegalArgumentException("In configuration property is missing sync attribute for this objectClass:"+ objectClass.getObjectClassValue());
         }
         log.ok("The object class is ok");
-
-        OdooModel model = cache.getModel(objectClass);
 
         Map<String, Object> options = new HashMap<>();
         options.put("fields", Arrays.asList(syncAttr));
