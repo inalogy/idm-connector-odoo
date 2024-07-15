@@ -390,7 +390,10 @@ public class OdooSearch {
                     .collect(Collectors.toList()));
         }
 
-        Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ,Collections.emptyList(),options);
+        // Prepare the domain filter
+        List<Object> domain = asList(asList(asList(syncAttr, ">", lastSyncDate)));
+
+        Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ,domain,options);
 
 
         ConnectorObject connectorObject = null;
@@ -403,17 +406,20 @@ public class OdooSearch {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
         for (Object resultObj : results) {
-            Map<String, Object> resultMap = (Map<String, Object>) resultObj;
-            Object lastUpdate = resultMap.get(syncAttr);
-            try {
-                if (lastUpdate == null || (lastSyncDate != null &&
-                        dateFormat.parse(lastSyncDate.toString()).compareTo(dateFormat.parse(lastUpdate.toString())) >= 0)) {
-                    continue;
+            if(syncAttr.equals("__last_update")){
+                Map<String, Object> resultMap = (Map<String, Object>) resultObj;
+                Object lastUpdate = resultMap.get(syncAttr);
+                try {
+                    if (lastUpdate == null || (lastSyncDate != null &&
+                            dateFormat.parse(lastSyncDate.toString()).compareTo(dateFormat.parse(lastUpdate.toString())) >= 0)) {
+                        continue;
+                    }
+                }
+                catch (ParseException e) {
+                    throw new RuntimeException(e);
                 }
             }
-            catch (ParseException e) {
-                throw new RuntimeException(e);
-            }
+
             Map<String, Object> result = (Map<String, Object>) resultObj;
 
             ConnectorObjectBuilder connObj = new ConnectorObjectBuilder();
