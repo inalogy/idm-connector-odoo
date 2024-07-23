@@ -144,6 +144,10 @@ public class OdooSchema {
         }
         aib.setType(mappedType.getMappedConnIdType());
 
+        if (modelName.equals("jarvis.group") && fieldName.equals("parents_ids")) {
+            aib.setMultiValued(true);
+        }
+
         result.add(aib.build());
 
         // do we need to expand this field? only expand one level (no recursion for now)
