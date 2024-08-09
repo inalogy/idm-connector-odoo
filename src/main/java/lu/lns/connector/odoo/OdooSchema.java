@@ -144,7 +144,7 @@ public class OdooSchema {
         }
         aib.setType(mappedType.getMappedConnIdType());
 
-        if (modelName.equals("jarvis.group") && fieldName.equals("parents_ids")) {
+        if (fieldType.equals("one2many")) {
             aib.setMultiValued(true);
         }
 
