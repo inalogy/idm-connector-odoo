@@ -144,7 +144,7 @@ public class OdooSchema {
         }
         aib.setType(mappedType.getMappedConnIdType());
 
-        if (fieldType.equals("one2many")) {
+        if (fieldType.equals("one2many") || fieldType.equals("many2many")) {
             aib.setMultiValued(true);
         }
 
