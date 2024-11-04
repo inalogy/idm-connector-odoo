@@ -22,6 +22,7 @@ import org.identityconnectors.framework.spi.operations.TestOp;
 import org.identityconnectors.framework.spi.operations.UpdateDeltaOp;
 
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 import static java.util.Collections.singletonList;
@@ -72,11 +73,24 @@ public class OdooConnector implements PoolableConnector, CreateOp, DeleteOp, Sea
 
     @Override
     public void test() {
-        client.executeOperation(() -> {
-            Object result = client.getXmlRpcClient().execute(client.getXmlRpcClientConfigCommon(), "version", Collections.emptyList());
-            LOG.ok("Test connection result: {0}", result);
-            return null;
+        this.getServerVersion();
+    }
+
+    public int getServerVersion() {
+        String versionString = client.executeOperation(() -> {
+            Map<String, Object> result = (Map<String, Object>) client.getXmlRpcClient()
+                    .execute(client.getXmlRpcClientConfigCommon(), "version", Collections.emptyList());
+            LOG.ok("Server version: {0}", result);
+            return (String) result.get("server_version");
         });
+
+
+        int dotIndex = versionString.indexOf('.');
+        if (dotIndex > 0) {
+            versionString = versionString.substring(0, dotIndex);
+        }
+
+        return Integer.valueOf(versionString);
     }
 
     @Override

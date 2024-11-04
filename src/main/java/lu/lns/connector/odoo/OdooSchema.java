@@ -1,5 +1,6 @@
 package lu.lns.connector.odoo;
 
+import lu.lns.connector.odoo.schema.type.ForeignKey;
 import lu.lns.connector.odoo.schema.type.OdooManyToOneType;
 import lu.lns.connector.odoo.schema.type.OdooType;
 import lu.lns.connector.odoo.schema.type.OdooTypeMapping;
@@ -16,12 +17,8 @@ import org.identityconnectors.framework.common.objects.Uid;
 import org.identityconnectors.framework.spi.Connector;
 import org.identityconnectors.framework.spi.operations.SearchOp;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
@@ -79,11 +76,13 @@ public class OdooSchema {
 
             // fetch field infos
             Object[] fieldIds = (Object[]) model.get(OdooConstants.MODEL_FIELD_FIELD_IDS);
-            Object[] fields = (Object[]) client.executeXmlRpc(OdooConstants.MODEL_NAME_MODEL_FIELDS, OdooConstants.OPERATION_READ, singletonList(asList(fieldIds)));
+            Object[] fieldObjs = (Object[]) client.executeXmlRpc(OdooConstants.MODEL_NAME_MODEL_FIELDS, OdooConstants.OPERATION_READ, singletonList(asList(fieldIds)));
 
-            for (Object fieldObj : fields) {
-                Map<String, Object> field = (Map<String, Object>) fieldObj;
-                ocib.addAllAttributeInfo(buildFieldSchema(modelName, "", field, unmappedTypes));
+            List<Map<String, Object>> fields = Arrays.stream(fieldObjs).map(fieldObj -> (Map<String, Object>) fieldObj).collect(Collectors.toList());
+            Set<String> fieldNames = fields.stream().map(field -> (String) field.get(OdooConstants.MODEL_FIELD_FIELD_NAME)).collect(Collectors.toSet());
+
+            for (Map<String, Object> fieldObj : fields) {
+                ocib.addAllAttributeInfo(buildFieldSchema(modelName, "", fieldObj, unmappedTypes, fieldNames));
             }
 
             ocib.addAttributeInfo(buildIdAttribute(Uid.NAME));
@@ -102,14 +101,14 @@ public class OdooSchema {
         sb.defineOperationOption(OperationOptionInfoBuilder.buildPagedResultsOffset(), SearchOp.class);
         sb.defineOperationOption(OperationOptionInfoBuilder.buildSortKeys(), SearchOp.class);
 
-        LOG.ok("Models: {0}", models.length);
+        LOG.ok("Models fetched: {0}", models.length);
         LOG.ok("---- Fetching schema end ----");
 
         return sb.build();
     }
 
     private Collection<AttributeInfo> buildFieldSchema(String modelName, String fieldPath, Map<String, Object> field,
-            Set<String> unmappedTypes) {
+                                                       Set<String> unmappedTypes, Set<String> fieldNames) {
 
         Collection<AttributeInfo> result = new LinkedList<>();
 
@@ -120,7 +119,7 @@ public class OdooSchema {
         }
 
         AttributeInfoBuilder aib = new AttributeInfoBuilder();
-        aib.setName(fieldPath + (fieldPath.isEmpty() ? "" : Constants.MODEL_FIELD_SEPARATOR) + fieldName);
+        aib.setName(computeAbsoluteFieldName(fieldPath, fieldName));
         aib.setRequired((Boolean) field.get(OdooConstants.MODEL_FIELD_FIELD_REQUIRED));
         aib.setReadable(true);
         aib.setCreateable(true);
@@ -144,7 +143,29 @@ public class OdooSchema {
         }
         aib.setType(mappedType.getMappedConnIdType());
 
-        result.add(aib.build());
+        AttributeInfo ai = aib.build();
+        result.add(ai);
+
+        /**
+         * For Many2one foreign key references, the Odoo value is a set of ID,NAME bound to two attributes.
+         */
+
+        if (mappedType instanceof OdooManyToOneType) {
+            String secAttName = ForeignKey.createSecondaryAttributeName(fieldName);
+
+            if (secAttName != null && !fieldNames.contains(secAttName)) {
+                AttributeInfoBuilder aib2 = new AttributeInfoBuilder();
+                aib2.setName(computeAbsoluteFieldName(fieldPath, secAttName));
+                aib2.setRequired(ai.isRequired());
+                aib2.setReadable(ai.isReadable());
+                aib2.setCreateable(ai.isCreateable());
+                aib2.setUpdateable(ai.isUpdateable());
+                aib2.setReturnedByDefault(ai.isReturnedByDefault());
+                aib2.setType(String.class);
+
+                result.add(aib2.build());
+            }
+        }
 
         // do we need to expand this field? only expand one level (no recursion for now)
         if (fieldPath.isEmpty()) {
@@ -155,6 +176,10 @@ public class OdooSchema {
         }
 
         return result;
+    }
+
+    private static String computeAbsoluteFieldName(String fieldPath, String fieldName) {
+        return fieldPath + (fieldPath.isEmpty() ? "" : Constants.MODEL_FIELD_SEPARATOR) + fieldName;
     }
 
     private Collection<AttributeInfo> expandField(Map<String, Object> field, Set<String> unmappedTypes) {
@@ -174,11 +199,14 @@ public class OdooSchema {
 
         // retrieve fields info
         Object[] fieldIds = (Object[]) model.get(OdooConstants.MODEL_FIELD_FIELD_IDS);
-        Object[] fields = (Object[]) client.executeXmlRpc(OdooConstants.MODEL_NAME_MODEL_FIELDS, OdooConstants.OPERATION_READ, singletonList(asList(fieldIds)));
+        Object[] fieldObjs = (Object[]) client.executeXmlRpc(OdooConstants.MODEL_NAME_MODEL_FIELDS, OdooConstants.OPERATION_READ, singletonList(asList(fieldIds)));
 
-        for (Object fieldObj : fields) {
+        List<Map<String, Object>> fields = Arrays.stream(fieldObjs).map(fieldObj -> (Map<String, Object>) fieldObj).collect(Collectors.toList());
+        Set<String> fieldNames = fields.stream().map(f -> (String) f.get(OdooConstants.MODEL_FIELD_FIELD_NAME)).collect(Collectors.toSet());
+
+        for (Map<String, Object> fieldObj : fields) {
             Map<String, Object> relatedField = (Map<String, Object>) fieldObj;
-            result.addAll(buildFieldSchema(relatedModel, (String) field.get(OdooConstants.MODEL_FIELD_FIELD_NAME), relatedField, unmappedTypes));
+            result.addAll(buildFieldSchema(relatedModel, (String) field.get(OdooConstants.MODEL_FIELD_FIELD_NAME), relatedField, unmappedTypes, fieldNames));
         }
 
         return result;

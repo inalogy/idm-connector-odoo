@@ -1,12 +1,10 @@
-version: '3.9'
-
 # This is a minimalistic Odoo setup to run the JUnit tests locally. It runs an Odoo instance,
 # with HR module activated with default Odoo test data.
 
 services:
 
   odoo:
-    image: odoo:16
+    image: odoo:17
     depends_on:
       - db-odoo
     ports:
@@ -16,9 +14,12 @@ services:
       - HOST=db-odoo
       - USER=odoo
       - PASSWORD=odoo
+    volumes:
+      - odoo-addons:/mnt/extra-addons
+      - odoo-varlib:/var/lib/odoo
 
   db-odoo:
-    image: postgres:12.2
+    image: postgres:16
     environment:
       - POSTGRES_DB=postgres
       - POSTGRES_USER=odoo
@@ -30,6 +31,10 @@ services:
 volumes:
   pg_odoo_data:
     driver: local
+  odoo-addons:
+      driver: local
+  odoo-varlib:
+      driver: local
 
 networks:
   default:
