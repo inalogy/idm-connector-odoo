@@ -3,12 +3,57 @@ package lu.lns.connector.odoo;
 import lu.lns.connector.odoo.schema.OdooField;
 import lu.lns.connector.odoo.schema.OdooModel;
 import lu.lns.connector.odoo.schema.type.ForeignKey;
+import lu.lns.connector.odoo.schema.type.OdooDateTimeType;
 import lu.lns.connector.odoo.schema.type.OdooManyToOneType;
+import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.objects.*;
 import org.identityconnectors.framework.common.objects.filter.*;
+import org.identityconnectors.framework.common.objects.Attribute;
+import org.identityconnectors.framework.common.objects.AttributeBuilder;
+import org.identityconnectors.framework.common.objects.ConnectorObject;
+import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
+import org.identityconnectors.framework.common.objects.Name;
+import org.identityconnectors.framework.common.objects.ObjectClass;
+import org.identityconnectors.framework.common.objects.OperationOptions;
+import org.identityconnectors.framework.common.objects.ResultsHandler;
+import org.identityconnectors.framework.common.objects.SortKey;
+import org.identityconnectors.framework.common.objects.SyncDeltaBuilder;
+import org.identityconnectors.framework.common.objects.SyncDeltaType;
+import org.identityconnectors.framework.common.objects.SyncResultsHandler;
+import org.identityconnectors.framework.common.objects.SyncToken;
+import org.identityconnectors.framework.common.objects.Uid;
+import org.identityconnectors.framework.common.objects.filter.AndFilter;
+import org.identityconnectors.framework.common.objects.filter.AttributeFilter;
+import org.identityconnectors.framework.common.objects.filter.CompositeFilter;
+import org.identityconnectors.framework.common.objects.filter.ContainsFilter;
+import org.identityconnectors.framework.common.objects.filter.EndsWithFilter;
+import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
+import org.identityconnectors.framework.common.objects.filter.Filter;
+import org.identityconnectors.framework.common.objects.filter.FilterBuilder;
+import org.identityconnectors.framework.common.objects.filter.GreaterThanFilter;
+import org.identityconnectors.framework.common.objects.filter.GreaterThanOrEqualFilter;
+import org.identityconnectors.framework.common.objects.filter.LessThanFilter;
+import org.identityconnectors.framework.common.objects.filter.LessThanOrEqualFilter;
+import org.identityconnectors.framework.common.objects.filter.NotFilter;
+import org.identityconnectors.framework.common.objects.filter.OrFilter;
+import org.identityconnectors.framework.common.objects.filter.StartsWithFilter;
 
 import java.util.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -37,10 +82,12 @@ public class OdooSearch {
 
     private OdooClient client;
     private OdooModelCache cache;
+    private OdooModelNameMatcher liveSyncModels;
 
-    public OdooSearch(OdooClient client, OdooModelCache cache) {
+    public OdooSearch(OdooClient client, OdooModelCache cache,OdooConfiguration configuration) {
         this.client = client;
         this.cache = cache;
+        this.liveSyncModels = new OdooModelNameMatcher(configuration.getRetrieveModels(), false);
     }
 
     /**
@@ -55,6 +102,16 @@ public class OdooSearch {
         boolean attributesToGetContainExpandedRelation = Arrays.stream(
                 Objects.requireNonNullElse(options.getAttributesToGet(), new String[0]))
             .anyMatch(a -> a.contains(Constants.MODEL_FIELD_SEPARATOR));
+
+        // execute getFields in odoo
+        if(query == null){
+            Map<String, Map<String, Object>> fieldsMetadata = client.fetchFieldsMetadata(model.getName());
+            if (fieldsMetadata != null){
+                params.put("fields", fieldsMetadata.keySet().stream()
+                        .filter(fieldName -> !fieldName.equals("picture"))
+                        .collect(Collectors.toList()));
+            }
+        }
 
         // execute search in odoo
         Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ, filter, params);
@@ -317,5 +374,151 @@ public class OdooSearch {
         }
         return attributeNameFromConnId;
     }
+
+    public void modelsSync(ObjectClass objectClass, SyncToken syncToken, SyncResultsHandler syncResultsHandler, OperationOptions operationOptions, Log log,OdooConfiguration configuration,OdooModel model) {
+        log.info("syncUser, token: {0}, options: {1}", syncToken, operationOptions);
+
+        String syncAttr = getSyncAttribute(objectClass,configuration.getLiveSyncModels());
+        if (syncAttr == null){
+            throw new IllegalArgumentException("In configuration property is missing objectClass or sync attribute for this objectClass:"+ objectClass.getObjectClassValue());
+        }
+
+        Object lastSyncDate = null;
+        if (syncToken != null) {
+            lastSyncDate = syncToken.getValue().toString();
+
+        }
+
+        SyncDeltaBuilder deltaBuilder = new SyncDeltaBuilder();
+        SyncToken deltaToken = getLatestSyncToken(objectClass,log,configuration,model);
+
+        if (deltaToken.equals(syncToken)){
+            return;
+        }
+
+        SyncDeltaType deltaType = null;
+
+        // execute getFields in odoo
+        Map<String, Object> options = new HashMap<>();
+        Map<String, Map<String, Object>> fieldsMetadata = client.fetchFieldsMetadata(model.getName());
+        if (fieldsMetadata != null){
+            options.put("fields", fieldsMetadata.keySet().stream()
+                    .filter(fieldName -> !fieldName.equals("picture"))
+                    .collect(Collectors.toList()));
+        }
+
+        // Prepare the domain filter
+        List<Object> domain = asList(asList(asList(syncAttr, ">", lastSyncDate)));
+
+        Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ,domain,options);
+
+
+        ConnectorObject connectorObject = null;
+        boolean shouldContinue = true;
+
+        if (results.length > 0){
+            deltaBuilder.setToken(deltaToken);
+        }
+
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        for (Object resultObj : results) {
+            if(syncAttr.equals("__last_update")){
+                Map<String, Object> resultMap = (Map<String, Object>) resultObj;
+                Object lastUpdate = resultMap.get(syncAttr);
+                try {
+                    if (lastUpdate == null || (lastSyncDate != null &&
+                            dateFormat.parse(lastSyncDate.toString()).compareTo(dateFormat.parse(lastUpdate.toString())) >= 0)) {
+                        continue;
+                    }
+                }
+                catch (ParseException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+
+            Map<String, Object> result = (Map<String, Object>) resultObj;
+
+            ConnectorObjectBuilder connObj = new ConnectorObjectBuilder();
+            String id = Integer.toString((int) result.get(MODEL_FIELD_FIELD_NAME_ID));
+            connObj.setUid(id);
+            connObj.setName(id);
+            connObj.setObjectClass(new ObjectClass(model.getName()));
+
+            for (var entry : result.entrySet()) {
+                mapResultField(model, "", entry, connObj);
+            }
+
+            connectorObject = connObj.build();
+
+            deltaType = SyncDeltaType.CREATE_OR_UPDATE;
+
+            deltaBuilder.setObject(connectorObject);
+            deltaBuilder.setUid(connectorObject.getUid());
+
+            deltaBuilder.setDeltaType(deltaType);
+
+            shouldContinue = syncResultsHandler.handle(deltaBuilder.build());
+            if (!shouldContinue) {
+                break;
+            }
+        }
+    }
+
+    public SyncToken getLatestSyncToken(ObjectClass objectClass,Log log,OdooConfiguration configuration,OdooModel model) {
+        log.info("check the ObjectClass");
+        String syncAttr = getSyncAttribute(objectClass,configuration.getLiveSyncModels());
+        if (syncAttr == null){
+            throw new IllegalArgumentException("In configuration property is missing sync attribute for this objectClass:"+ objectClass.getObjectClassValue());
+        }
+        log.ok("The object class is ok");
+
+        Map<String, Object> options = new HashMap<>();
+        options.put("fields", Arrays.asList(syncAttr));
+
+        // execute search in odoo (return only id and __last_update date for every user)
+        Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ, Collections.emptyList(), options);
+
+        log.info("Number of returned users is:"+results.length);
+
+        Object maxLastUpdate = null;
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+        // Iterate through the results to find the maximum date
+        for (Object result : results) {
+            // Assuming result is a Map
+            Map<String, Object> resultMap = (Map<String, Object>) result;
+            Object lastUpdate = resultMap.get(syncAttr);
+            try {
+                if (lastUpdate != null && (maxLastUpdate == null || dateFormat.parse(lastUpdate.toString()).compareTo(dateFormat.parse(maxLastUpdate.toString())) > 0)) {
+                    maxLastUpdate = lastUpdate;
+                }
+            }
+            catch (ParseException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+        log.info("Maximum last update date: " + maxLastUpdate);
+
+        return new SyncToken(maxLastUpdate);
+    }
+
+    private String getSyncAttribute(ObjectClass objectClass, String liveSyncSynchronizationAttribute) {
+        if (objectClass == null || liveSyncSynchronizationAttribute == null) {
+            throw new IllegalArgumentException("Provided object class or synchronization attribute is null");
+        }
+
+        String[] attributes = liveSyncSynchronizationAttribute.split(",");
+        for (String attribute : attributes) {
+            String[] parts = attribute.split("/");
+            if (parts.length == 2 && parts[0].trim().equals(objectClass.getObjectClassValue())) {
+                return parts[1].trim();
+            }
+        }
+
+        return null;
+    }
+
 
 }
