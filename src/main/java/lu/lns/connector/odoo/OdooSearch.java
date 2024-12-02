@@ -2,10 +2,13 @@ package lu.lns.connector.odoo;
 
 import lu.lns.connector.odoo.schema.OdooField;
 import lu.lns.connector.odoo.schema.OdooModel;
+import lu.lns.connector.odoo.schema.type.ForeignKey;
 import lu.lns.connector.odoo.schema.type.OdooDateTimeType;
 import lu.lns.connector.odoo.schema.type.OdooManyToOneType;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
+import org.identityconnectors.framework.common.objects.*;
+import org.identityconnectors.framework.common.objects.filter.*;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
 import org.identityconnectors.framework.common.objects.ConnectorObject;
@@ -36,6 +39,7 @@ import org.identityconnectors.framework.common.objects.filter.NotFilter;
 import org.identityconnectors.framework.common.objects.filter.OrFilter;
 import org.identityconnectors.framework.common.objects.filter.StartsWithFilter;
 
+import java.util.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.ZoneId;
@@ -64,16 +68,16 @@ import static lu.lns.connector.odoo.OdooConstants.*;
 public class OdooSearch {
 
     private static Map<Class<? extends AttributeFilter>, String> attributeFilterClassToOperatorMap = Map.of(
-            EqualsFilter.class, OPERATOR_EQUALS,
-            GreaterThanFilter.class, OPERATOR_GREATER,
-            GreaterThanOrEqualFilter.class, OPERATOR_GREATER_EQUALS,
-            LessThanFilter.class, OPERATOR_SMALLER,
-            LessThanOrEqualFilter.class, OPERATOR_SMALLER_EQUALS
+        EqualsFilter.class, OPERATOR_EQUALS,
+        GreaterThanFilter.class, OPERATOR_GREATER,
+        GreaterThanOrEqualFilter.class, OPERATOR_GREATER_EQUALS,
+        LessThanFilter.class, OPERATOR_SMALLER,
+        LessThanOrEqualFilter.class, OPERATOR_SMALLER_EQUALS
     );
 
     private static Map<Class<? extends CompositeFilter>, String> compositeFilterClassToOperatorMap = Map.of(
-            AndFilter.class, OPERATOR_AND,
-            OrFilter.class, OPERATOR_OR
+        AndFilter.class, OPERATOR_AND,
+        OrFilter.class, OPERATOR_OR
     );
 
     private OdooClient client;
@@ -97,7 +101,7 @@ public class OdooSearch {
 
         boolean attributesToGetContainExpandedRelation = Arrays.stream(
                 Objects.requireNonNullElse(options.getAttributesToGet(), new String[0]))
-                .anyMatch(a -> a.contains(Constants.MODEL_FIELD_SEPARATOR));
+            .anyMatch(a -> a.contains(Constants.MODEL_FIELD_SEPARATOR));
 
         // execute getFields in odoo
         if(query == null){
@@ -139,22 +143,42 @@ public class OdooSearch {
             OdooField modelField = model.getField(field.getKey());
             Object mapped = modelField.getType().mapToConnIdValue(field.getValue(), modelField);
 
-            AttributeBuilder attr = new AttributeBuilder();
-            attr.setName(relation + (!relation.isEmpty() ? Constants.MODEL_FIELD_SEPARATOR : "") + field.getKey());
+            AttributeBuilder primaryAttributeBuilder = new AttributeBuilder();
+            AttributeBuilder secondaryAttributeBuilder = null;
+
+            primaryAttributeBuilder.setName(relation + (!relation.isEmpty() ? Constants.MODEL_FIELD_SEPARATOR : "") + field.getKey());
 
             if (mapped instanceof Collection) { // multi-valued attribute
-                attr.addValue((Collection<?>) mapped);
-            }
-            else if (mapped != null) {
-                attr.addValue(mapped);
+                primaryAttributeBuilder.addValue((Collection<?>) mapped);
+            } else if (mapped instanceof ForeignKey) { // Many2one attribute
+                ForeignKey foreignKey = (ForeignKey) mapped;
+                if (foreignKey.getId() != null) {
+                    primaryAttributeBuilder.addValue(foreignKey.getId());
+                }
+
+                String secondaryAttributeName = ForeignKey.createSecondaryAttributeName(primaryAttributeBuilder.getName());
+
+                if (secondaryAttributeName != null) {
+                    secondaryAttributeBuilder = new AttributeBuilder();
+                    secondaryAttributeBuilder.setName(secondaryAttributeName);
+                    if (foreignKey.getName() != null) {
+                        secondaryAttributeBuilder.addValue(foreignKey.getName());
+                    }
+                }
+            } else if (mapped != null) {
+                primaryAttributeBuilder.addValue(mapped);
             }
 
-            connObj.addAttribute(attr.build());
+            connObj.addAttribute(primaryAttributeBuilder.build());
+
+            if (secondaryAttributeBuilder != null) {
+                connObj.addAttribute(secondaryAttributeBuilder.build());
+            }
         }
     }
 
     private void queryExpandedRelations(OdooModel model, OperationOptions options, Map<String, Object> record,
-            ConnectorObjectBuilder connObj) {
+                                        ConnectorObjectBuilder connObj) {
         // first separate the attributes according their relation
         Map<String, List<String>> relationToRetrievalAttributesMap = new HashMap<>();
 
@@ -163,7 +187,7 @@ public class OdooSearch {
                 String[] path = attributeToGet.split(Pattern.quote(Constants.MODEL_FIELD_SEPARATOR));
                 if (path.length > 2) {
                     throw new ConnectorException("Attribute '" + attributeToGet
-                            + "' to be retrieved has more than one level of related record");
+                        + "' to be retrieved has more than one level of related record");
                 }
 
                 relationToRetrievalAttributesMap.computeIfAbsent(path[0], k -> new LinkedList<>()).add(path[1]);
@@ -183,12 +207,12 @@ public class OdooSearch {
         for (var entry : relationToRetrievalAttributesMap.entrySet()) {
             OdooField field = model.getField(entry.getKey());
             OdooModel relatedModel = cache.getModel(((OdooManyToOneType) field.getType()).getRelatedModel());
-            String relatedId = (String) field.getType().mapToConnIdValue(record.get(entry.getKey()), field);
+            ForeignKey relatedId = (ForeignKey) field.getType().mapToConnIdValue(record.get(entry.getKey()), field);
 
             if (relatedId != null) {
                 Map<String, Object> params = Map.of(OPERATION_PARAMETER_FIELDS, entry.getValue());
                 List<Object> filter = Collections.singletonList(Collections.singletonList(Arrays.asList(
-                        MODEL_FIELD_FIELD_NAME_ID, OPERATOR_EQUALS, relatedId)));
+                    MODEL_FIELD_FIELD_NAME_ID, OPERATOR_EQUALS, relatedId.getId())));
 
                 Object[] results = (Object[]) client.executeXmlRpc(relatedModel.getName(), OPERATION_SEARCH_READ, filter, params);
                 if (results == null || results.length != 1) {
@@ -199,8 +223,7 @@ public class OdooSearch {
                 for (var relatedField : relatedRecord.entrySet()) {
                     mapResultField(relatedModel, entry.getKey(), relatedField, connObj);
                 }
-            }
-            else {
+            } else {
                 // retrieve all related attributes as null
                 entry.getValue().forEach(connObj::addAttribute);
             }
@@ -213,23 +236,21 @@ public class OdooSearch {
 
             if (af.getAttribute().getName().contains(Constants.MODEL_FIELD_SEPARATOR)) {
                 throw new ConnectorException("Filtering by expanded relation attributes is unsupported: attribute="
-                        + af.getAttribute().getName() + ", model=" + model.getName());
+                    + af.getAttribute().getName() + ", model=" + model.getName());
             }
 
             OdooField field = model.getField(mapSpecialAttributeNameToOdooField(af.getAttribute().getName()));
             if (field == null) {
                 throw new ConnectorException("Did not find odoo field with name '" + af.getAttribute().getName() + "' in odoo model '"
-                        + model.getName() + "'");
+                    + model.getName() + "'");
             }
 
             Object value;
             if (af.getAttribute().getValue() == null || af.getAttribute().getValue().isEmpty()) {
                 value = null;
-            }
-            else if (af.getAttribute().getValue().size() > 1) {
+            } else if (af.getAttribute().getValue().size() > 1) {
                 throw new UnsupportedOperationException("Multiple attribute values not supported for AttributeFilter");
-            }
-            else {
+            } else {
                 value = field.getType().mapToOdooSearchFilterValue(af.getAttribute().getValue().iterator().next());
             }
 
@@ -237,39 +258,35 @@ public class OdooSearch {
 
             if (query instanceof StartsWithFilter) {
                 return singletonList(asList(
-                        field.getName(),
-                        OPERATOR_LIKE2,
-                        escapeForLikeOperator(value) + OPERATOR_LIKE_ANY_STRING));
-            }
-            else if (query instanceof EndsWithFilter) {
+                    field.getName(),
+                    OPERATOR_LIKE2,
+                    escapeForLikeOperator(value) + OPERATOR_LIKE_ANY_STRING));
+            } else if (query instanceof EndsWithFilter) {
                 return singletonList(asList(
-                        field.getName(),
-                        OPERATOR_LIKE2,
-                        OPERATOR_LIKE_ANY_STRING + escapeForLikeOperator(value)));
-            }
-            else if (query instanceof ContainsFilter) {
+                    field.getName(),
+                    OPERATOR_LIKE2,
+                    OPERATOR_LIKE_ANY_STRING + escapeForLikeOperator(value)));
+            } else if (query instanceof ContainsFilter) {
                 return singletonList(asList(
-                        field.getName(),
-                        OPERATOR_LIKE,
-                        escapeForLikeOperator(value)));
+                    field.getName(),
+                    OPERATOR_LIKE,
+                    escapeForLikeOperator(value)));
             }
 
             String operator = attributeFilterClassToOperatorMap.get(query.getClass());
             if (operator != null) {
                 return singletonList(asList(
-                        field.getName(),
-                        operator,
-                        value));
+                    field.getName(),
+                    operator,
+                    value));
             }
-        }
-        else if (query instanceof NotFilter) {
+        } else if (query instanceof NotFilter) {
             NotFilter not = (NotFilter) query;
             List<Object> result = new LinkedList<>();
             result.add(OPERATOR_NOT);
             result.addAll(translateFilter(model, not.getFilter()));
             return result;
-        }
-        else if (query instanceof CompositeFilter) {
+        } else if (query instanceof CompositeFilter) {
             String operator = compositeFilterClassToOperatorMap.get(query.getClass());
             if (operator != null) {
                 CompositeFilter cf = (CompositeFilter) query;
@@ -286,9 +303,9 @@ public class OdooSearch {
 
     private String escapeForLikeOperator(Object value) {
         return value.toString()
-                .replace(OPERATOR_LIKE_ESCAPE_CHAR, OPERATOR_LIKE_ESCAPE_CHAR + OPERATOR_LIKE_ESCAPE_CHAR)
-                .replace("%", OPERATOR_LIKE_ESCAPE_CHAR + "%")
-                .replace("_", OPERATOR_LIKE_ESCAPE_CHAR + "_");
+            .replace(OPERATOR_LIKE_ESCAPE_CHAR, OPERATOR_LIKE_ESCAPE_CHAR + OPERATOR_LIKE_ESCAPE_CHAR)
+            .replace("%", OPERATOR_LIKE_ESCAPE_CHAR + "%")
+            .replace("_", OPERATOR_LIKE_ESCAPE_CHAR + "_");
     }
 
     private Map<String, Object> prepareQueryParameters(OdooModel model, OperationOptions options) {
@@ -305,15 +322,15 @@ public class OdooSearch {
         // sorting
         if (options.getSortKeys() != null) {
             Iterable<SortKey> effectiveSortKeys = Utils.distinctBy(
-                    Arrays.stream(options.getSortKeys())
-                            .map(sk -> {
-                                if (sk.getField().contains(Constants.MODEL_FIELD_SEPARATOR)) {
-                                    throw new ConnectorException("Sort key for expanded relation attribute is unsupported: sortKey="
-                                            + sk.getField() + ", model=" + model.getName());
-                                }
-                                return new SortKey(mapSpecialAttributeNameToOdooField(sk.getField()), sk.isAscendingOrder());
-                            }),
-                    SortKey::getField)::iterator;
+                Arrays.stream(options.getSortKeys())
+                    .map(sk -> {
+                        if (sk.getField().contains(Constants.MODEL_FIELD_SEPARATOR)) {
+                            throw new ConnectorException("Sort key for expanded relation attribute is unsupported: sortKey="
+                                + sk.getField() + ", model=" + model.getName());
+                        }
+                        return new SortKey(mapSpecialAttributeNameToOdooField(sk.getField()), sk.isAscendingOrder());
+                    }),
+                SortKey::getField)::iterator;
 
             StringBuilder sortParam = new StringBuilder();
             for (SortKey sort : effectiveSortKeys) {
@@ -333,19 +350,19 @@ public class OdooSearch {
         // partial retrieval of attributes
         String[] retrieve = Objects.requireNonNullElse(options.getAttributesToGet(), new String[0]);
         List<String> effectiveRetrieve = Arrays.stream(retrieve)
-                .filter(attr -> !attr.equals(Name.NAME))
-                .filter(attr -> !attr.equals(Uid.NAME))
-                .filter(attr -> !attr.equals(MODEL_FIELD_FIELD_NAME_ID))
-                .map(attr -> {
-                    // expanded relations: return the relation ID and do additional queries afterwards
-                    if (attr.contains(Constants.MODEL_FIELD_SEPARATOR)) {
-                        String[] path = attr.split(Pattern.quote(Constants.MODEL_FIELD_SEPARATOR));
-                        return path[0];
-                    }
-                    return attr;
-                })
-                .distinct()
-                .collect(Collectors.toList());
+            .filter(attr -> !attr.equals(Name.NAME))
+            .filter(attr -> !attr.equals(Uid.NAME))
+            .filter(attr -> !attr.equals(MODEL_FIELD_FIELD_NAME_ID))
+            .map(attr -> {
+                // expanded relations: return the relation ID and do additional queries afterwards
+                if (attr.contains(Constants.MODEL_FIELD_SEPARATOR)) {
+                    String[] path = attr.split(Pattern.quote(Constants.MODEL_FIELD_SEPARATOR));
+                    return path[0];
+                }
+                return attr;
+            })
+            .distinct()
+            .collect(Collectors.toList());
         params.put(OPERATION_PARAMETER_FIELDS, effectiveRetrieve); // id will always be returned
 
         return params;

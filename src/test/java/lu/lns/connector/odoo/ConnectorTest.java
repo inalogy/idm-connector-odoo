@@ -1,32 +1,10 @@
 package lu.lns.connector.odoo;
 
 import org.apache.xmlrpc.XmlRpcException;
+import org.identityconnectors.framework.common.exceptions.AlreadyExistsException;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
-import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.AttributeBuilder;
-import org.identityconnectors.framework.common.objects.AttributeDelta;
-import org.identityconnectors.framework.common.objects.AttributeDeltaBuilder;
-import org.identityconnectors.framework.common.objects.AttributeInfo;
-import org.identityconnectors.framework.common.objects.ConnectorObject;
-import org.identityconnectors.framework.common.objects.ObjectClass;
-import org.identityconnectors.framework.common.objects.ObjectClassInfo;
-import org.identityconnectors.framework.common.objects.OperationOptions;
-import org.identityconnectors.framework.common.objects.OperationOptionsBuilder;
-import org.identityconnectors.framework.common.objects.Schema;
-import org.identityconnectors.framework.common.objects.SortKey;
-import org.identityconnectors.framework.common.objects.Uid;
-import org.identityconnectors.framework.common.objects.filter.AndFilter;
-import org.identityconnectors.framework.common.objects.filter.ContainsFilter;
-import org.identityconnectors.framework.common.objects.filter.EndsWithFilter;
-import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
-import org.identityconnectors.framework.common.objects.filter.Filter;
-import org.identityconnectors.framework.common.objects.filter.GreaterThanFilter;
-import org.identityconnectors.framework.common.objects.filter.GreaterThanOrEqualFilter;
-import org.identityconnectors.framework.common.objects.filter.LessThanFilter;
-import org.identityconnectors.framework.common.objects.filter.LessThanOrEqualFilter;
-import org.identityconnectors.framework.common.objects.filter.NotFilter;
-import org.identityconnectors.framework.common.objects.filter.OrFilter;
-import org.identityconnectors.framework.common.objects.filter.StartsWithFilter;
+import org.identityconnectors.framework.common.objects.*;
+import org.identityconnectors.framework.common.objects.filter.*;
 import org.junit.Test;
 
 import java.time.LocalDate;
@@ -34,21 +12,18 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static lu.lns.connector.odoo.Constants.MODEL_FIELD_SEPARATOR;
 import static lu.lns.connector.odoo.OdooConstants.MODEL_NAME_MODELS;
 import static lu.lns.connector.odoo.OdooConstants.MODEL_NAME_MODEL_FIELDS;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.*;
+
 
 /**
  * Unit tests covering parts of the connector implementation. It is assumed that an Odoo instance is running
@@ -68,6 +43,13 @@ public class ConnectorTest {
         connector.test(); // will throw ConnectorException on failure
     }
 
+    /**
+     * employee_id and company_id are Many2one types. The internal API value returned is an (id, name) reference
+     * of the linked object. Our connector will create a pseudo attribute to allow binding both by id and/or name.
+     *
+     * For the company, the default schema already declares the company_name as an explicit attribute of the
+     * model, so this test also ensures that if the _name field already exists, it is not duplicated.
+     */
     @Test
     public void testSchemaRetrievalWithBasicRestrictions() {
         OdooConfiguration conf1 = new OdooConfiguration(connector.getConfiguration());
@@ -77,8 +59,17 @@ public class ConnectorTest {
         conn1.init(conf1);
 
         Schema schema1 = conn1.schema();
-        assertEquals("expected one model to match", 1, schema1.getObjectClassInfo().size());
-        assertEquals("expected the only specified model to match", "res.users", schema1.getObjectClassInfo().iterator().next().getType());
+        assertThat(schema1.getObjectClassInfo())
+            .hasSize(1)                   // Check that the list has only one element
+            .first()                               // Get the first element
+            .extracting(ObjectClassInfo::getType)  // Extract the type as a String
+            .isEqualTo("res.users");    // Is the requested Odoo type
+
+        ObjectClassInfo employeeClassInfo = schema1.getObjectClassInfo().iterator().next();
+        Set<AttributeInfo> attributeInfo = employeeClassInfo.getAttributeInfo();
+        Set<String> attributeNames = attributeInfo.stream().map(AttributeInfo::getName).collect(Collectors.toSet());
+
+        assertThat(attributeNames).contains("company_id", "company_name", "parent_id", "parent_name");
     }
 
     @Test
@@ -115,11 +106,11 @@ public class ConnectorTest {
         assertEquals("expected one model to be fetched", 1, modelNames.size());
 
         Set<String> fieldNames = schema1.getObjectClassInfo().iterator().next().getAttributeInfo().stream().map(AttributeInfo::getName)
-                .collect(Collectors.toSet());
+            .collect(Collectors.toSet());
 
         for (String shouldHaveField : Arrays.asList("partner_id",
-                "partner_id" + MODEL_FIELD_SEPARATOR + "phone",
-                "partner_id" + MODEL_FIELD_SEPARATOR + "email")) {
+            "partner_id" + MODEL_FIELD_SEPARATOR + "phone",
+            "partner_id" + MODEL_FIELD_SEPARATOR + "email")) {
             assertTrue("expected field " + shouldHaveField + " to be present in schema", fieldNames.contains(shouldHaveField));
         }
     }
@@ -188,7 +179,7 @@ public class ConnectorTest {
         // search related "res.partner" record and verify
         assertNotNull("relation attribute not filled", result.getAttributeByName("partner_id"));
         assertEquals("relation attribute shouldn't be changed", relatedId,
-                result.getAttributeByName("partner_id").getValue().iterator().next());
+            result.getAttributeByName("partner_id").getValue().iterator().next());
 
         results = new TestResultsHandler();
         connector.executeQuery(new ObjectClass("res.partner"), new EqualsFilter(new Uid(relatedId.toString())), results, oo);
@@ -199,14 +190,92 @@ public class ConnectorTest {
     }
 
     @Test
+    public void testChangingEmployeeJob() {
+        ConnectorObject employeeV1 = queryForSingleObject("hr.employee", 1);
+
+        // Test ssue where _name properties were not present when _id was null
+        assertAttributeEquals("Expected no coach for CEO", null, employeeV1, "coach_id");
+        assertAttributeEquals("Expected no coach name for CEO", null, employeeV1, "coach_name");
+
+        // Set job to experienced developer by ID value
+        update("hr.employee", 1, "job_id", 4);
+        ConnectorObject employeeV2 = queryForSingleObject("hr.employee", 1);
+
+        // Set job back to CEO by name
+        update("hr.employee", 1, "job_name", "Chief Executive Officer");
+        ConnectorObject employeeV3 = queryForSingleObject("hr.employee", 1);
+
+        assertAttributeEquals("Expected initial job was CEO = 1", "1", employeeV1, "job_id");
+        assertAttributeEquals("Expected initial job was CEO as string name", "Chief Executive Officer", employeeV1, "job_name");
+        assertAttributeEquals("Expected job updated to experienced developer", "4", employeeV2, "job_id");
+        assertAttributeEquals("Expected job updated to experienced developer", "Experienced Developer", employeeV2, "job_name");
+        assertAttributeEquals("Expected job set back to CEO", "1", employeeV3, "job_id");
+        assertAttributeEquals("Expected job set back to CEO as string name", "Chief Executive Officer", employeeV3, "job_name");
+    }
+
+    @Test
+    public void testResetMany2oneValueById() {
+        ConnectorObject employeeV1 = queryForSingleObject("hr.employee", 1);
+        assertAttributeNotNull("Expecting non null job for the CEO", employeeV1, "job_id");
+        assertAttributeNotNull("Expecting non null job for the CEO", employeeV1, "job_name");
+
+        update("hr.employee", 1, "job_id", null);
+
+        ConnectorObject employeeV2 = queryForSingleObject("hr.employee", 1);
+        assertAttributeEquals("Expecting an empty job ID", null, employeeV2, "job_id");
+        assertAttributeEquals("Expecting an empty job name", null, employeeV2, "job_name");
+
+        update("hr.employee", 1, "job_id", 1);
+    }
+
+    @Test
+    public void testResetMany2oneValueByName() {
+        ConnectorObject employeeV1 = queryForSingleObject("hr.employee", 1);
+        assertAttributeNotNull("Expecting non null job for the CEO", employeeV1, "job_id");
+        assertAttributeNotNull("Expecting non null job for the CEO", employeeV1, "job_name");
+
+        update("hr.employee", 1, "job_name", null);
+
+        ConnectorObject employeeV2 = queryForSingleObject("hr.employee", 1);
+        assertAttributeEquals("Expecting an empty job", null, employeeV2, "job_id");
+        assertAttributeEquals("Expecting an empty job", null, employeeV2, "job_name");
+
+        update("hr.employee", 1, "job_id", 1);
+    }
+
+    @Test
+    public void testResetCharValue() {
+        ConnectorObject employeeV1 = queryForSingleObject("hr.employee", 1);
+        assertAttributeNotNull("Expecting non null work phone for the CEO", employeeV1, "work_phone");
+
+        update("hr.employee", 1, "work_phone", null);
+
+        ConnectorObject employeeV2 = queryForSingleObject("hr.employee", 1);
+        assertAttributeEquals("Expecting null work phone for the CEO after update", null, employeeV2, "work_phone");
+
+        update("hr.employee", 1, "work_phone", "12345678");
+    }
+
+    @Test
+    public void testSetEmployeeJobToUnknownJob() {
+        ConnectorObject employeeV1 = queryForSingleObject("hr.employee", 1);
+        try {
+            update("hr.employee", 1, "job_name", "An unknown job");
+            fail("Exception should be raised on unknown value");
+        } catch (ConnectorException e) {
+            assertThat(e).message().contains("unknown", "hr.job");
+        }
+    }
+
+    @Test
     public void testUpdateWithRelatedCreatedRecord() {
         ObjectClass oc = new ObjectClass("hr.employee");
         OperationOptions oo = new OperationOptionsBuilder().build();
 
         // create an employee without user details
         Set<Attribute> attrs = Set.of(
-                AttributeBuilder.build("work_phone", "+49 TESTDATA"),
-                AttributeBuilder.build("name", "Test Emp" + System.currentTimeMillis()));
+            AttributeBuilder.build("work_phone", "+49 TESTDATA"),
+            AttributeBuilder.build("name", "Test Emp" + System.currentTimeMillis()));
         Uid uid = connector.create(oc, attrs, oo);
 
         TestResultsHandler results = new TestResultsHandler();
@@ -227,7 +296,7 @@ public class ConnectorTest {
         ConnectorObject updatedObj = results.getConnectorObjects().iterator().next();
         String userId = (String) assertAttributeNotNull("expected user_id to be created", updatedObj, "user_id");
         assertTrue("expect user_id in modified attributes in return value of updateDelta",
-                modified != null && modified.size() == 1 && modified.iterator().next().getName().equals("user_id"));
+            modified != null && modified.size() == 1 && modified.iterator().next().getName().equals("user_id"));
 
         results = new TestResultsHandler();
         connector.executeQuery(new ObjectClass("res.users"), new EqualsFilter(new Uid(userId.toString())), results, oo);
@@ -251,10 +320,9 @@ public class ConnectorTest {
         try {
             connector.create(oc, attrs, oo);
             fail("expecting create to fail because of required attribute missing");
-        }
-        catch (ConnectorException e) {
+        } catch (ConnectorException e) {
             assertTrue("expected to fail because of required attribute missing; message=" + e.getMessage(),
-                    e.getCause() instanceof XmlRpcException);
+                e.getCause() instanceof XmlRpcException);
         }
 
         // search related record and verify that it was not rolled back
@@ -276,16 +344,15 @@ public class ConnectorTest {
         // consequence the created record should be rolled back
         String login = "test" + System.currentTimeMillis();
         Set<AttributeDelta> ch = Set.of(
-                AttributeDeltaBuilder.build("name"), // provide an invalid field value
-                AttributeDeltaBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "login", login),
-                AttributeDeltaBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "name", "Test U" + System.currentTimeMillis()));
+            AttributeDeltaBuilder.build("name"), // provide an invalid field value
+            AttributeDeltaBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "login", login),
+            AttributeDeltaBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "name", "Test U" + System.currentTimeMillis()));
         try {
             connector.updateDelta(oc, uid, ch, oo);
             fail("expecting update to fail because of invalid attribute value");
-        }
-        catch (ConnectorException e) {
+        } catch (ConnectorException e) {
             assertTrue("expected to fail because of invalid attribute value; message=" + e.getMessage(),
-                    e.getMessage().contains("Delta add/remove not supported for field 'name' in model 'hr.employee'"));
+                e.getMessage().contains("Delta add/remove not supported for field 'name' in model 'hr.employee'"));
         }
 
         // verify that user by login is rolled back
@@ -302,25 +369,24 @@ public class ConnectorTest {
         // create an employee with user details
         String login = "test" + System.currentTimeMillis();
         Set<Attribute> attrs = Set.of(
-                AttributeBuilder.build("name", "Test Emp" + System.currentTimeMillis()),
-                AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "login", login),
-                AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "name", "Test U" + System.currentTimeMillis())
+            AttributeBuilder.build("name", "Test Emp" + System.currentTimeMillis()),
+            AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "login", login),
+            AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "name", "Test U" + System.currentTimeMillis())
         );
         Uid uid = connector.create(oc, attrs, oo);
 
         // update the employee such that the user should be updated but the actual update of employee fails; as a
         // consequence the created record should be rolled back
         Set<AttributeDelta> ch = Set.of(
-                AttributeDeltaBuilder.build("name"), // provide an invalid field value
-                AttributeDeltaBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "login", login + "_c"));
+            AttributeDeltaBuilder.build("name"), // provide an invalid field value
+            AttributeDeltaBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "login", login + "_c"));
 
         try {
             connector.updateDelta(oc, uid, ch, oo);
             fail("expecting update to fail because of invalid attribute value");
-        }
-        catch (ConnectorException e) {
+        } catch (ConnectorException e) {
             assertTrue("expected to fail because of invalid attribute value; message=" + e.getMessage(),
-                    e.getMessage().contains("Delta add/remove not supported for field 'name' in model 'hr.employee'"));
+                e.getMessage().contains("Delta add/remove not supported for field 'name' in model 'hr.employee'"));
         }
 
         // verify that user record update is rolled back (must not find the user by the changed login name)
@@ -341,28 +407,28 @@ public class ConnectorTest {
         // create groups
         int[] groups = createGroups();
         HashSet<String> groupsSet = Arrays.stream(groups).boxed()
-                .map(Object::toString)
-                .collect(Collectors.toCollection(HashSet<String>::new));
+            .map(Object::toString)
+            .collect(Collectors.toCollection(HashSet<String>::new));
 
         // create a user with groups relation specified
         String login = "test" + System.currentTimeMillis();
         String name = "Test U" + System.currentTimeMillis();
         Uid uid = connector.create(oc, Set.of(
-                AttributeBuilder.build("login", login),
-                AttributeBuilder.build("name", name),
-                AttributeBuilder.build("groups_id", groups[0], groups[1])
+            AttributeBuilder.build("login", login),
+            AttributeBuilder.build("name", name),
+            AttributeBuilder.build("groups_id", groups[0], groups[1])
         ), oo);
 
         // update user groups using delta:
 
         // add a reference and verify
         connector.updateDelta(oc, uid, Set.of(
-                new AttributeDeltaBuilder().setName("groups_id").addValueToAdd(groups[2], groups[3]).build()), oo);
+            new AttributeDeltaBuilder().setName("groups_id").addValueToAdd(groups[2], groups[3]).build()), oo);
 
         TestResultsHandler results = new TestResultsHandler();
         connector.executeQuery(oc, new EqualsFilter(AttributeBuilder.build("name", name)), results, oo);
         assertEquals("expect 3rd/4th groups to be added", groupsSet, new HashSet<>(
-                results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
+            results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
 
         // remove a reference
         connector.updateDelta(oc, uid, Set.of(new AttributeDeltaBuilder().setName("groups_id").addValueToRemove(groups[2]).build()), oo);
@@ -372,7 +438,7 @@ public class ConnectorTest {
         results = new TestResultsHandler();
         connector.executeQuery(oc, new EqualsFilter(AttributeBuilder.build("name", name)), results, oo);
         assertEquals("expect 3rd group to be removed", groupsSet, new HashSet<>(
-                results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
+            results.getConnectorObjects().iterator().next().getAttributeByName("groups_id").getValue()));
     }
 
     private int[] createGroups() {
@@ -382,7 +448,7 @@ public class ConnectorTest {
 
         for (int i = 0; i < result.length; i++) {
             result[i] = Integer.parseInt(connector.create(new ObjectClass("res.groups"), Set.of(
-                    AttributeBuilder.build("name", unique + i)
+                AttributeBuilder.build("name", unique + i)
             ), new OperationOptionsBuilder().build()).getUidValue());
         }
 
@@ -398,16 +464,16 @@ public class ConnectorTest {
         String name = "Test Emp" + System.currentTimeMillis();
         String uname = "Test U" + System.currentTimeMillis();
         Set<Attribute> attrs = Set.of(
-                AttributeBuilder.build("name", name),
-                AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "login", login),
-                AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "name", uname)
+            AttributeBuilder.build("name", name),
+            AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "login", login),
+            AttributeBuilder.build("user_id" + MODEL_FIELD_SEPARATOR + "name", uname)
         );
         Uid uid = connector.create(oc, attrs, new OperationOptionsBuilder().build());
 
         // search by that employee and retrieve user details in same call via expanded relation
         TestResultsHandler results = new TestResultsHandler();
         connector.executeQuery(oc, new EqualsFilter(uid), results,
-                new OperationOptionsBuilder().setAttributesToGet("name", "user_id" + MODEL_FIELD_SEPARATOR + "login").build());
+            new OperationOptionsBuilder().setAttributesToGet("name", "user_id" + MODEL_FIELD_SEPARATOR + "login").build());
 
         assertEquals("expect one record to be found (" + name + ", " + uid.getUidValue() + ")", 1, results.getConnectorObjects().size());
 
@@ -417,13 +483,12 @@ public class ConnectorTest {
         try {
             // this assertion is not working for Odoo v11 and v12, seems like the model takes name from user
             assertAttributeEquals("expect name attribute to match as created", name, resultObj, "name");
-        }
-        catch (AssertionError e) {
+        } catch (AssertionError e) {
             assertAttributeEquals("expect name attribute to match as created user", uname, resultObj, "name");
         }
 
         assertAttributeEquals("expect related login attribute to match as created", login, resultObj,
-                "user_id" + MODEL_FIELD_SEPARATOR + "login");
+            "user_id" + MODEL_FIELD_SEPARATOR + "login");
     }
 
     @Test
@@ -437,11 +502,11 @@ public class ConnectorTest {
         String dateField1 = "birthday";
         ZonedDateTime bd = ZonedDateTime.of(LocalDate.ofYearDay(1900, 42), LocalTime.MIN, ZoneId.systemDefault());
         Set<Attribute> attrs = Set.of(
-                AttributeBuilder.build("name", name),
-                AttributeBuilder.build(textField1, textField1Value),
-                AttributeBuilder.build("color", 1),
-                //AttributeBuilder.build("certificate", "master"), --> in v14
-                AttributeBuilder.build(dateField1, bd)
+            AttributeBuilder.build("name", name),
+            AttributeBuilder.build(textField1, textField1Value),
+            AttributeBuilder.build("color", 1),
+            //AttributeBuilder.build("certificate", "master"), --> in v14
+            AttributeBuilder.build(dateField1, bd)
         );
         Uid uid = connector.create(oc, attrs, new OperationOptionsBuilder().build());
 
@@ -457,37 +522,37 @@ public class ConnectorTest {
 
         // filter with "and"
         assertFound.accept(new AndFilter(
-                new EqualsFilter(AttributeBuilder.build("name", name)),
-                new EqualsFilter(AttributeBuilder.build("color", 1))), true);
+            new EqualsFilter(AttributeBuilder.build("name", name)),
+            new EqualsFilter(AttributeBuilder.build("color", 1))), true);
         assertFound.accept(new AndFilter(
-                new EqualsFilter(AttributeBuilder.build("name", name)),
-                new EqualsFilter(AttributeBuilder.build("color", 2))), false);
+            new EqualsFilter(AttributeBuilder.build("name", name)),
+            new EqualsFilter(AttributeBuilder.build("color", 2))), false);
 
         // filter with "or"
         assertFound.accept(new OrFilter(
-                new EqualsFilter(AttributeBuilder.build("name", name)),
-                new EqualsFilter(AttributeBuilder.build("color", 2))), true);
+            new EqualsFilter(AttributeBuilder.build("name", name)),
+            new EqualsFilter(AttributeBuilder.build("color", 2))), true);
         assertFound.accept(new OrFilter(
-                new EqualsFilter(AttributeBuilder.build("name", name + "_notexists")),
-                new EqualsFilter(AttributeBuilder.build("color", 1))), true);
+            new EqualsFilter(AttributeBuilder.build("name", name + "_notexists")),
+            new EqualsFilter(AttributeBuilder.build("color", 1))), true);
         assertFound.accept(new OrFilter(
-                new EqualsFilter(AttributeBuilder.build("name", name + "_notexists")),
-                new EqualsFilter(AttributeBuilder.build("color", 2))), false);
+            new EqualsFilter(AttributeBuilder.build("name", name + "_notexists")),
+            new EqualsFilter(AttributeBuilder.build("color", 2))), false);
 
         // filter with nested not/and/or
         assertFound.accept(new OrFilter(
-                new NotFilter(new EqualsFilter(AttributeBuilder.build("name", name + "_notexists"))),
-                new EqualsFilter(AttributeBuilder.build("color", 2))), true);
+            new NotFilter(new EqualsFilter(AttributeBuilder.build("name", name + "_notexists"))),
+            new EqualsFilter(AttributeBuilder.build("color", 2))), true);
         assertFound.accept(new OrFilter(
-                new AndFilter(
-                        new EqualsFilter(AttributeBuilder.build("name", name)),
-                        new EqualsFilter(AttributeBuilder.build(textField1, textField1Value))),
-                new EqualsFilter(AttributeBuilder.build("color", 2))), true);
+            new AndFilter(
+                new EqualsFilter(AttributeBuilder.build("name", name)),
+                new EqualsFilter(AttributeBuilder.build(textField1, textField1Value))),
+            new EqualsFilter(AttributeBuilder.build("color", 2))), true);
 
         // filter with "starts with", "ends with" and "contains"
         assertFound.accept(new StartsWithFilter(AttributeBuilder.build("name", name.substring(0, 5))), true);
         assertFound.accept(new StartsWithFilter(
-                AttributeBuilder.build(textField1, textField1Value.substring(0, textField1Value.length() - 1))), true);
+            AttributeBuilder.build(textField1, textField1Value.substring(0, textField1Value.length() - 1))), true);
         assertFound.accept(new StartsWithFilter(AttributeBuilder.build("name", name.substring(0, 4) + "#")), false);
 
         assertFound.accept(new EndsWithFilter(AttributeBuilder.build("name", name.substring(5))), true);
@@ -525,7 +590,7 @@ public class ConnectorTest {
         // create an employee that includes the % wildcard in its name
         String name = "Emp%loyee E" + System.currentTimeMillis();
         Set<Attribute> attrs = Set.of(
-                AttributeBuilder.build("name", name)
+            AttributeBuilder.build("name", name)
         );
         Uid uid = connector.create(oc, attrs, new OperationOptionsBuilder().build());
 
@@ -547,7 +612,7 @@ public class ConnectorTest {
             connector.executeQuery(oc, filter, results, new OperationOptionsBuilder().build());
 
             assertEquals("expect to " + (shouldMatch ? "" : "not") + " match record", shouldMatch,
-                    results.getConnectorObjects().stream().anyMatch(obj -> obj.getUid().equals(uid)));
+                results.getConnectorObjects().stream().anyMatch(obj -> obj.getUid().equals(uid)));
         };
     }
 
@@ -605,12 +670,69 @@ public class ConnectorTest {
         assertEquals("expected record to be deleted", 0, results.getConnectorObjects().size());
     }
 
+    @Test
+    public void testDuplicateEmployee() {
+        ObjectClass oc = new ObjectClass("hr.employee");
+        OperationOptions oo = new OperationOptionsBuilder().build();
+
+        int serverVersion = connector.getServerVersion();
+
+        if (serverVersion < 14) {
+            // Up to version 13, the employee creation would not fail on barcode collision
+            // In version 13, the error message is only a stack trace
+            return;
+        }
+
+        // Create an employee with Badge 42
+        String badgeId = "425";
+
+        Uid uid1 = connector.create(oc, Set.of(
+            AttributeBuilder.build("name", "Test Emp1" + System.currentTimeMillis()),
+            AttributeBuilder.build("barcode", badgeId)
+        ), oo);
+
+        try {
+            // Create another employee with same badge
+            Uid uid2 = connector.create(oc, Set.of(
+                AttributeBuilder.build("name", "Test Emp2" + System.currentTimeMillis()),
+                AttributeBuilder.build("barcode", badgeId)
+            ), oo);
+
+            fail();
+        } catch (AlreadyExistsException ex) {
+            Throwable cause = ex.getCause();
+            assertTrue(cause instanceof XmlRpcException);
+        }
+
+        // delete it
+        connector.delete(oc, uid1, oo);
+
+        // verify
+        TestResultsHandler results = new TestResultsHandler();
+        connector.executeQuery(oc, new EqualsFilter(uid1), results, oo);
+        assertEquals("expected record to be deleted", 0, results.getConnectorObjects().size());
+    }
+
+    private ConnectorObject queryForSingleObject(String odoo_type, long odoo_id) {
+        OperationOptions oo = new OperationOptionsBuilder().build();
+        ObjectClass oc = new ObjectClass(odoo_type);
+        TestResultsHandler handler = new TestResultsHandler();
+        connector.executeQuery(oc, new EqualsFilter(new Uid(Long.toString(odoo_id))), handler, oo);
+        return handler.getSingleConnectorObject();
+    }
+
+    private void update(String odoo_type, long odoo_id, String attribute_name, Object value) {
+        OperationOptions oo = new OperationOptionsBuilder().build();
+        ObjectClass oc = new ObjectClass(odoo_type);
+        connector.updateDelta(oc, new Uid(Long.toString(odoo_id)), Set.of(AttributeDeltaBuilder.build(attribute_name, value)), oo);
+    }
+
     private Object assertAttributeNotNull(String message, ConnectorObject record, String attributeName) {
         assertNotNull("Attribute '" + attributeName + "' not present in record", record.getAttributeByName(attributeName));
         assertNotNull("expected non-null attribute value for '" + attributeName + "'",
-                record.getAttributeByName(attributeName).getValue());
+            record.getAttributeByName(attributeName).getValue());
         assertEquals("expected one attribute value for '" + attributeName + "'", 1,
-                record.getAttributeByName(attributeName).getValue().size());
+            record.getAttributeByName(attributeName).getValue().size());
         Object val = record.getAttributeByName(attributeName).getValue().iterator().next();
         assertNotNull(message, val);
         return val;
@@ -622,13 +744,12 @@ public class ConnectorTest {
         if (expectedValue == null) {
             // no attribute value
             assertNull(message, record.getAttributeByName(attributeName).getValue());
-        }
-        else {
+        } else {
             // single attribute value
             assertNotNull("expected non-null attribute value for '" + attributeName + "'",
-                    record.getAttributeByName(attributeName).getValue());
+                record.getAttributeByName(attributeName).getValue());
             assertEquals("expected one attribute value for '" + attributeName + "'", 1,
-                    record.getAttributeByName(attributeName).getValue().size());
+                record.getAttributeByName(attributeName).getValue().size());
             assertEquals(message, expectedValue, record.getAttributeByName(attributeName).getValue().iterator().next());
         }
     }

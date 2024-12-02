@@ -5,6 +5,7 @@ import org.apache.xmlrpc.XmlRpcException;
 import org.apache.xmlrpc.client.XmlRpcClient;
 import org.apache.xmlrpc.client.XmlRpcClientConfig;
 import org.apache.xmlrpc.client.XmlRpcClientConfigImpl;
+import org.identityconnectors.framework.common.exceptions.AlreadyExistsException;
 import org.identityconnectors.framework.common.exceptions.ConfigurationException;
 import org.identityconnectors.framework.common.exceptions.ConnectionFailedException;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
@@ -108,6 +109,14 @@ public class OdooClient {
             else if (e.getCause() instanceof IOException) {
                 throw new ConnectorIOException(e);
             }
+            else if (e.getCause() == null && (e.getMessage().contains(" must be unique") || e.getMessage().endsWith("_uniq"))) {
+                // Hack to identify duplicate records. Sadly we don't seem to have
+                // a reliable way to identify this case.
+                // v14/15 are returning an error code as a message ending in _uniq
+                // v16/17 are returning a human readable error message
+                throw new AlreadyExistsException("Detected a unique field violation.", e);
+            }
+
             throw new ConnectorException(e);
         }
     }

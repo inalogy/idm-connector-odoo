@@ -2,11 +2,12 @@ package lu.lns.connector.odoo;
 
 import org.apache.commons.lang3.StringUtils;
 import org.identityconnectors.common.security.GuardedString;
-import org.identityconnectors.framework.common.objects.AttributeInfo;
-import org.identityconnectors.framework.common.objects.Schema;
+import org.identityconnectors.framework.common.objects.*;
+import org.identityconnectors.framework.common.objects.filter.EqualsFilter;
 
+import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 import static java.util.Arrays.asList;
@@ -19,47 +20,27 @@ import static lu.lns.connector.odoo.OdooConstants.*;
  */
 public class DevelopmentTest {
 
-    private OdooConnector connector;
+    private final OdooConnector connector;
 
     public DevelopmentTest() {
         connector = new OdooConnector();
         connector.init(new OdooConfiguration() {{
-            setUrl("http://localhost:10082");
+            setUrl("http://localhost:8069");
             setDatabase("db1");
             setUsername("admin");
-            setPassword(new GuardedString("secret".toCharArray()));
+            setPassword(new GuardedString("admin".toCharArray()));
         }});
-    }
-
-    public void schemaRetrieval() {
-        Schema s = connector.schema();
-        s.getObjectClassInfo().stream().filter(oci -> oci.getType().equals("res.users")).forEach(oci -> {
-            System.out.println("----------------------------------");
-            System.out.println(oci.getType());
-
-            oci.getAttributeInfo().stream().sorted(Comparator.comparing(AttributeInfo::getName)).forEach(ai ->
-                    System.out.println("-> Attribute " + ai.getName() + ": type=" + ai.getType().getName() + " flags=" + ai.getFlags()));
-
-            System.out.println("----------------------------------");
-            System.out.println("Filtered by updatable:");
-            oci.getAttributeInfo().stream().sorted(Comparator.comparing(AttributeInfo::getName))
-                    .filter(ai -> !ai.getFlags().contains(AttributeInfo.Flags.NOT_UPDATEABLE))
-                    .forEach(ai ->
-                            System.out.println(
-                                    "-> Attribute " + ai.getName() + ": type=" + ai.getType().getName() + " flags=" + ai.getFlags()));
-        });
     }
 
     public void dumpModel() {
         OdooClient client = new OdooClient(connector.getConfiguration());
-        //String modelName = "res.users";
         String modelName = "hr.employee";
 
         client.executeOperationWithAuthentication(() -> {
             Object[] models = (Object[]) client.executeXmlRpc(MODEL_NAME_MODELS, OPERATION_SEARCH_READ,
                     singletonList(singletonList(asList(MODEL_FIELD_MODEL, OPERATOR_EQUALS, modelName))),
                     Map.of());
-
+            @SuppressWarnings("unchecked")
             Map<String, Object> model = (Map<String, Object>) models[0];
 
             System.out.println("----------- Model ------------");
@@ -70,6 +51,7 @@ public class DevelopmentTest {
 
             System.out.println("----------- Fields Overview ------------");
             for (var fieldObj : fields) {
+                @SuppressWarnings("unchecked")
                 Map<String, Object> field = (Map<String, Object>) fieldObj;
                 System.out.println(
                         "Field " + StringUtils.rightPad((String) field.get(MODEL_FIELD_FIELD_NAME), 35)
@@ -79,17 +61,29 @@ public class DevelopmentTest {
                                 + ", rel=" + StringUtils.rightPad(field.get("related").toString(), 25));
             }
 
-            System.out.println("----------- Fields ------------");
-
-            for (var fieldObj : fields) {
-                Map<String, Object> field = (Map<String, Object>) fieldObj;
-
-                System.out.println("--- Field: " + field.get(MODEL_FIELD_FIELD_NAME) + " ---");
-                field.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(this::dumpField);
-            }
+//            System.out.println("----------- Fields ------------");
+//
+//            for (var fieldObj : fields) {
+//                Map<String, Object> field = (Map<String, Object>) fieldObj;
+//
+//                System.out.println("--- Field: " + field.get(MODEL_FIELD_FIELD_NAME) + " ---");
+//                field.entrySet().stream().sorted(Map.Entry.comparingByKey()).forEach(this::dumpField);
+//            }
 
             return null;
         });
+    }
+
+    private void displayEmployee(int employeeId) {
+        OperationOptions oo = new OperationOptionsBuilder().build();
+        ObjectClass oc = new ObjectClass("hr.employee");
+        Uid uid = new Uid(Integer.toString(employeeId));
+        TestResultsHandler resultsHandler = new TestResultsHandler();
+
+        connector.executeQuery(oc, new EqualsFilter(uid), resultsHandler, oo);
+
+        ConnectorObject employee = resultsHandler.getSingleConnectorObject();
+        System.out.println(employee);
     }
 
     private void dumpField(Map.Entry<String, Object> field) {
@@ -101,7 +95,9 @@ public class DevelopmentTest {
     }
 
     public static void main(String[] args) {
-        new DevelopmentTest().dumpModel();
+        DevelopmentTest developmentTest = new DevelopmentTest();
+//        developmentTest.dumpModel();
+        developmentTest.displayEmployee(1);
     }
 
 }

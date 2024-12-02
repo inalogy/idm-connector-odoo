@@ -2,28 +2,16 @@ package lu.lns.connector.odoo;
 
 import lu.lns.connector.odoo.schema.OdooField;
 import lu.lns.connector.odoo.schema.OdooModel;
+import lu.lns.connector.odoo.schema.type.ForeignKey;
 import lu.lns.connector.odoo.schema.type.MultiValueOdooType;
 import lu.lns.connector.odoo.schema.type.OdooManyToOneType;
 import org.identityconnectors.common.logging.Log;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.framework.common.exceptions.ConnectorException;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
-import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.AttributeBuilder;
-import org.identityconnectors.framework.common.objects.AttributeDelta;
-import org.identityconnectors.framework.common.objects.AttributeDeltaBuilder;
-import org.identityconnectors.framework.common.objects.Name;
-import org.identityconnectors.framework.common.objects.Uid;
+import org.identityconnectors.framework.common.objects.*;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -63,7 +51,7 @@ public class OdooWrite {
                 String[] path = attr.getName().split(Pattern.quote(Constants.MODEL_FIELD_SEPARATOR));
                 if (path.length > 2) {
                     throw new InvalidAttributeValueException("Attribute name '" + attr.getName()
-                            + "' has more than one level of related record");
+                        + "' has more than one level of related record");
                 }
 
                 Set<Attribute> relatedAttrs = relationToRecordMap.computeIfAbsent(path[0], k -> new HashSet<>());
@@ -78,14 +66,14 @@ public class OdooWrite {
             // if we have a related record, the original record must not contain another relation reference for that relational field
             if (effectiveCreateAttributes.stream().anyMatch(attr -> attr.getName().equals(key))) {
                 throw new InvalidAttributeValueException("Attribute '" + key + "' cannot be specified because related record fields " +
-                        "are specified, too");
+                    "are specified, too");
             }
 
             // is the related record really for a relational field?
             OdooField field = model.getField(key);
             if (!(field.getType() instanceof OdooManyToOneType)) {
                 throw new InvalidAttributeValueException("Attribute '" + key
-                        + "' has related attributes specified but is not many2one type.");
+                    + "' has related attributes specified but is not many2one type.");
             }
         }
 
@@ -108,8 +96,7 @@ public class OdooWrite {
 
             // create the original record with relations to created (related) records
             return internalCreateRecord(model, effectiveCreateAttributes);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             // we need to rollback created (related) records
             rollbackCreatedRelatedRecords(model, relationToCreatedIdMap);
 
@@ -161,15 +148,12 @@ public class OdooWrite {
 
             if (field.getType() instanceof MultiValueOdooType) {
                 val = attr.getValue();
-            }
-            else if (attr.getValue() == null || attr.getValue().isEmpty()) {
+            } else if (attr.getValue() == null || attr.getValue().isEmpty()) {
                 val = null;
-            }
-            else if (attr.getValue().size() > 1) {
+            } else if (attr.getValue().size() > 1) {
                 throw new InvalidAttributeValueException("Multiple attribute values not supported in create operation for " +
-                        "field '" + field.getName() + "' in model '" + field.getModel().getName() + "'");
-            }
-            else {
+                    "field '" + field.getName() + "' in model '" + field.getModel().getName() + "'");
+            } else {
                 val = attr.getValue().iterator().next();
             }
 
@@ -199,7 +183,7 @@ public class OdooWrite {
                 String[] path = attr.getName().split(Pattern.quote(Constants.MODEL_FIELD_SEPARATOR));
                 if (path.length > 2) {
                     throw new InvalidAttributeValueException("Attribute name '" + attr.getName()
-                            + "' has more than one level of related record");
+                        + "' has more than one level of related record");
                 }
 
                 Set<AttributeDelta> relatedAttrs = relationToRecordMap.computeIfAbsent(path[0], k -> new HashSet<>());
@@ -207,8 +191,7 @@ public class OdooWrite {
                 copy.setName(path[1]);
                 if (attr.getValuesToReplace() != null) {
                     copy.addValueToReplace(attr.getValuesToReplace());
-                }
-                else {
+                } else {
                     copy.addValueToAdd(attr.getValuesToAdd());
                     copy.addValueToRemove(attr.getValuesToRemove());
                 }
@@ -223,14 +206,14 @@ public class OdooWrite {
             // if we have a related record, the original record must not contain another relation reference for that relational field
             if (effectiveAttributeDeltas.stream().anyMatch(attr -> attr.getName().equals(key))) {
                 throw new InvalidAttributeValueException("Attribute '" + key + "' cannot be specified because related record fields " +
-                        "are specified, too");
+                    "are specified, too");
             }
 
             // is the related record really for a relational field?
             OdooField field = model.getField(key);
             if (!(field.getType() instanceof OdooManyToOneType)) {
                 throw new InvalidAttributeValueException("Attribute '" + key
-                        + "' has related attributes specified but is not many2one type.");
+                    + "' has related attributes specified but is not many2one type.");
             }
         }
 
@@ -245,7 +228,7 @@ public class OdooWrite {
 
                 // create related records that do not already exist
                 for (var entry : relationToRecordMap.entrySet()) {
-                    if (relations.get(entry.getKey()) != null) {
+                    if (((ForeignKey) relations.get(entry.getKey())).getIdAsInteger() != null) {
                         // relation already present, do not create a new related record
                         continue;
                     }
@@ -258,8 +241,8 @@ public class OdooWrite {
                     for (AttributeDelta attrDelta : entry.getValue()) {
                         if (attrDelta.getValuesToReplace() == null) {
                             throw new InvalidAttributeValueException("Attribute '" + entry.getKey()
-                                    + "' needs to be created as related record but the related attribute delta '" + attrDelta.getName()
-                                    + "' doesn't have valuesToReplace set; need the full attribute values set here");
+                                + "' needs to be created as related record but the related attribute delta '" + attrDelta.getName()
+                                + "' doesn't have valuesToReplace set; need the full attribute values set here");
                         }
                         relatedAttributes.add(AttributeBuilder.build(attrDelta.getName(), attrDelta.getValuesToReplace()));
                     }
@@ -277,7 +260,7 @@ public class OdooWrite {
 
                 // update related records that already exist
                 for (var entry : relationToRecordMap.entrySet()) {
-                    if (relations.get(entry.getKey()) == null) {
+                    if (((ForeignKey) relations.get(entry.getKey())).getIdAsInteger() == null) {
                         // relation not present, it was created above
                         continue;
                     }
@@ -285,11 +268,12 @@ public class OdooWrite {
                     OdooField field = model.getField(entry.getKey());
                     OdooManyToOneType type = (OdooManyToOneType) field.getType();
                     OdooModel relatedModel = cache.getModel(type.getRelatedModel());
-                    Integer relatedId = Integer.valueOf((String) relations.get(entry.getKey()));
+                    ForeignKey foreignKey = (ForeignKey) relations.get(entry.getKey());
+                    Integer relatedId = foreignKey.getIdAsInteger();
 
                     // remember state of related record before the update for potential rollback on exception
                     Map<String, Object> relatedRecordBeforeUpdate = readRecord(relatedModel, relatedId,
-                            entry.getValue().stream().map(AttributeDelta::getName).collect(Collectors.toSet()));
+                        entry.getValue().stream().map(AttributeDelta::getName).collect(Collectors.toSet()));
 
                     // update the related record
                     internalUpdateRecord(relatedModel, relatedId, entry.getValue());
@@ -304,8 +288,7 @@ public class OdooWrite {
             internalUpdateRecord(model, id, effectiveAttributeDeltas);
 
             return modifiedAttributes;
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             // we need to rollback created (related) records
             rollbackCreatedRelatedRecords(model, relationToCreatedIdMap);
 
@@ -320,23 +303,23 @@ public class OdooWrite {
         for (var entry : relationToValuesBeforeUpdateMap.entrySet()) {
             OdooField field = model.getField(entry.getKey());
             OdooModel relatedModel = cache.getModel(((OdooManyToOneType) field.getType()).getRelatedModel());
-            Integer relatedId = (Integer) entry.getValue().get(MODEL_FIELD_FIELD_NAME_ID);
+            Object idValue = entry.getValue().get(MODEL_FIELD_FIELD_NAME_ID);
+            Integer relatedId = (Integer) idValue;
             try {
                 // NOTE: We cannot directly call the Odoo write operation with the data retrieved before because relations are handled
                 // differently (e.g. reading yields list of IDs but writing requires commands)
                 internalUpdateRecord(relatedModel, relatedId, entry.getValue().entrySet().stream()
-                        .map(originalData -> {
-                            if (originalData.getValue() instanceof Collection) {
-                                return AttributeDeltaBuilder.build(originalData.getKey(), (Collection<?>) originalData.getValue());
-                            }
-                            return AttributeDeltaBuilder.build(originalData.getKey(), originalData.getValue());
-                        })
-                        .collect(Collectors.toSet()));
-            }
-            catch (Exception inner) {
+                    .map(originalData -> {
+                        if (originalData.getValue() instanceof Collection) {
+                            return AttributeDeltaBuilder.build(originalData.getKey(), (Collection<?>) originalData.getValue());
+                        }
+                        return AttributeDeltaBuilder.build(originalData.getKey(), originalData.getValue());
+                    })
+                    .collect(Collectors.toSet()));
+            } catch (Exception inner) {
                 // not much we can do here: the updated related record will remain as-is in odoo, needs to be reverted manually
                 LOG.warn(inner, "Unable to rollback updated related record: model={0}, id={1}; needs to be reverted manually",
-                        relatedModel.getName(), relatedId);
+                    relatedModel.getName(), relatedId);
             }
         }
     }
@@ -347,11 +330,10 @@ public class OdooWrite {
             OdooModel relatedModel = cache.getModel(((OdooManyToOneType) field.getType()).getRelatedModel());
             try {
                 client.executeXmlRpc(relatedModel.getName(), OPERATION_DELETE, singletonList(singletonList(entry.getValue())));
-            }
-            catch (Exception inner) {
+            } catch (Exception inner) {
                 // not much we can do here: the created related record will remain in odoo probably until cleaned up
                 LOG.warn(inner, "Unable to rollback created related record: model={0}, id={1}; needs to be cleaned-up manually",
-                        relatedModel.getName(), entry.getValue());
+                    relatedModel.getName(), entry.getValue());
             }
         }
     }
@@ -359,7 +341,7 @@ public class OdooWrite {
     private Map<String, Object> readRecord(OdooModel model, Integer id, Collection<String> fieldsToRetrieve) {
         Map<String, Object> params = Map.of(OPERATION_PARAMETER_FIELDS, new ArrayList<>(fieldsToRetrieve));
         Object filter = Collections.singletonList(Collections.singletonList(Arrays.asList(
-                MODEL_FIELD_FIELD_NAME_ID, OPERATOR_EQUALS, id)));
+            MODEL_FIELD_FIELD_NAME_ID, OPERATOR_EQUALS, id)));
 
         // read from API
         Object[] results = (Object[]) client.executeXmlRpc(model.getName(), OPERATION_SEARCH_READ, filter, params);
@@ -368,7 +350,9 @@ public class OdooWrite {
         }
 
         // map to connId values
+        @SuppressWarnings("unchecked")
         Map<String, Object> record = (Map<String, Object>) results[0];
+
         for (var entry : record.entrySet()) {
             if (!entry.getKey().equals(MODEL_FIELD_FIELD_NAME_ID) && model.hasField(entry.getKey())) {
                 OdooField modelField = model.getField(entry.getKey());
@@ -382,18 +366,20 @@ public class OdooWrite {
         Map<String, Object> fields = new HashMap<>();
 
         for (AttributeDelta delta : attributeDeltas) {
-            if (delta.getName().equals(Uid.NAME) || delta.getName().equals(Name.NAME)) {
+            final String deltaName = delta.getName();
+            final List<Object> deltaReplacementValues = delta.getValuesToReplace();
+
+            if (deltaName.equals(Uid.NAME) || deltaName.equals(Name.NAME)) {
                 // we ignore these attributes as they are the ID of the record to be updated in odoo
                 continue;
             }
 
             Object val;
             //Checking if password is GuardedString and if so than decrypting it
-            if (delta.getName().equals("__PASSWORD__")) {
-                String password ;
-                if (delta.getValuesToReplace() != null && !delta.getValuesToReplace().isEmpty()) {
-                    List<Object> valueToChange = delta.getValuesToReplace();
-                    GuardedString guardedPassword = (GuardedString) valueToChange.get(0);
+            if (deltaName.equals("__PASSWORD__")) {
+                String password;
+                if (deltaReplacementValues != null && !deltaReplacementValues.isEmpty()) {
+                    GuardedString guardedPassword = (GuardedString) deltaReplacementValues.get(0);
                     password = extractPasswordFromGuardedString(guardedPassword);
                     val = password;
                 } else {
@@ -404,45 +390,90 @@ public class OdooWrite {
                 continue;
             }
 
-            OdooField field = model.getField(delta.getName());
+            OdooField field = model.getField(deltaName);
+
             if (field == null) {
-                throw new ConnectorException("Did not find odoo field with name '" + delta.getName() + "' in odoo model.");
+                String fkIdProperty = ForeignKey.createPrimaryAttributeName(deltaName);
+                if (fkIdProperty != null) {
+                    field = model.getField(fkIdProperty);
+                    if (field != null && field.getType() instanceof OdooManyToOneType) {
+                        OdooManyToOneType odooType = (OdooManyToOneType) field.getType();
+                        Integer fkIdValue = null;
+
+                        if (deltaReplacementValues.get(0) != null) {
+                            String relatedOdooModel = odooType.getRelatedModel();
+                            String nameValue = String.valueOf(deltaReplacementValues.get(0));
+
+                            fkIdValue = findObjectIdByName(relatedOdooModel, nameValue);
+
+                            if (fkIdValue == null) {
+                                throw new ConnectorException("No matching record found for " + deltaName
+                                    + " with name " + nameValue + " in model " + relatedOdooModel);
+                            }
+                        }
+
+                        fields.put(fkIdProperty, fkIdValue);
+                        continue;
+                    }
+                }
             }
 
-            if (delta.getValuesToReplace() != null) {
+            if (field == null) {
+                throw new ConnectorException("Did not find odoo field with name '" + deltaName + "' in odoo model.");
+            }
 
-
+            if (deltaReplacementValues != null) {
                 if (field.getType() instanceof MultiValueOdooType) {
                     // multi-value mapped as a whole
-                    val = delta.getValuesToReplace();
-                }
-                else if (delta.getValuesToReplace().isEmpty()) {
+                    val = deltaReplacementValues;
+                } else if (deltaReplacementValues.isEmpty()) {
                     val = null;
-                }
-                else if (delta.getValuesToReplace().size() > 1) {
+                } else if (deltaReplacementValues.size() > 1) {
                     throw new InvalidAttributeValueException("Multiple attribute values not supported in update operation for " +
-                            "field '" + field.getName() + "' in model '" + field.getModel().getName() + "'");
-                }
-                else {
-                    val = delta.getValuesToReplace().iterator().next();
+                        "field '" + field.getName() + "' in model '" + field.getModel().getName() + "'");
+                } else {
+                    val = deltaReplacementValues.iterator().next();
                 }
 
                 fields.put(field.getName(), field.getType().mapToOdooUpdateRecordValue(val));
-            }
-            else if (field.getType() instanceof MultiValueOdooType) {
+            } else if (field.getType() instanceof MultiValueOdooType) {
                 MultiValueOdooType mv = (MultiValueOdooType) field.getType();
                 val = mv.mapToOdooUpdateRecordDeltaValue(delta.getValuesToAdd(), delta.getValuesToRemove());
 
                 fields.put(field.getName(), val);
-            }
-            else {
+            } else {
                 throw new InvalidAttributeValueException("Delta add/remove not supported for field '" + field.getName()
-                        + "' in model '" + field.getModel().getName() + "'");
+                    + "' in model '" + field.getModel().getName() + "'");
+            }
+        }
+
+        // null values are supported only if we set xmlRpcCfg.setEnabledForExtensions(true). Sadly this breaks
+        // compatibility with older Python 2 based Odoo releases. We can simply work around this by wrapping
+        // this with False which provides exactly the same results on server side.
+        for (var entry: fields.entrySet()) {
+            if ( entry.getValue() == null ) {
+                entry.setValue(Boolean.FALSE);
             }
         }
 
         // execute update
         client.executeXmlRpc(model.getName(), OPERATION_UPDATE, asList(singletonList(id), fields));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Integer findObjectIdByName(String odooModel, String nameValue) {
+        List<Object> filter = singletonList(asList(MODEL_FIELD_FIELD_NAME, OPERATOR_EQUALS, nameValue));
+        Map<String, Object> params = new HashMap<>();
+        params.put("fields", asList(MODEL_FIELD_FIELD_NAME_ID, MODEL_FIELD_FIELD_NAME));
+        Object[] results = (Object[]) client.executeXmlRpc(odooModel, OPERATION_SEARCH_READ, singletonList(filter), params);
+
+        if (results.length != 1) {
+            return null;
+        }
+
+        Map<String, Object> record = (Map<String, Object>) results[0];
+
+        return (Integer) record.get(MODEL_FIELD_FIELD_NAME_ID);
     }
 
 }

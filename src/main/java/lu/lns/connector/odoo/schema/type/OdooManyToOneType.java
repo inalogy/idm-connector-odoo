@@ -4,7 +4,6 @@ import lu.lns.connector.odoo.OdooConstants;
 import lu.lns.connector.odoo.schema.OdooField;
 import org.identityconnectors.framework.common.exceptions.InvalidAttributeValueException;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -31,16 +30,24 @@ public class OdooManyToOneType extends OdooRelationType {
     @Override
     public Object mapToConnIdValue(Object valueFromXmlRpc, OdooField context) {
         if (valueFromXmlRpc instanceof Object[]) {
-            // a pair of integer ID and name (?), did not find info in docs; however, we only need the ID
-            // same as with the for the many to many we need to convert it to String as they're extending same class
+            // a pair of integer ID and String name
             List<String> tuple = Stream.of((Object[]) valueFromXmlRpc).map(
                     (Object obj) -> Objects.toString(obj, null)
             ).collect(Collectors.toList());
 
-            if (!tuple.isEmpty() && tuple.get(0) instanceof String) {
-                return tuple.get(0);
+            if (!tuple.isEmpty()) {
+                return new ForeignKey(tuple.get(0), tuple.get(1));
             }
         }
+
+        // False is returned on null remote reference
+        if (valueFromXmlRpc instanceof Boolean) {
+            Boolean value = (Boolean) valueFromXmlRpc;
+            if (!value) {
+                return new ForeignKey(null, null);
+            }
+        }
+
         return super.mapToConnIdValue(valueFromXmlRpc, context);
     }
 
