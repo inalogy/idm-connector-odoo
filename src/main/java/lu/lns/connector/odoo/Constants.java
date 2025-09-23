@@ -15,6 +15,8 @@ public final class Constants {
      */
     public static final String MODEL_FIELD_SEPARATOR = "--";
 
+    public static final String ATTR_PICTURE = "picture";
+
     private Constants() {
         // no instancing
     }

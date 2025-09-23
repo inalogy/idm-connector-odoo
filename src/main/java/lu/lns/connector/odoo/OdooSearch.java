@@ -104,7 +104,7 @@ public class OdooSearch {
             Map<String, Map<String, Object>> fieldsMetadata = client.fetchFieldsMetadata(model.getName());
             if (fieldsMetadata != null){
                 params.put("fields", fieldsMetadata.keySet().stream()
-                        .filter(fieldName -> !fieldName.equals("picture"))
+                        .filter(fieldName -> !fieldName.equals(Constants.ATTR_PICTURE))
                         .collect(Collectors.toList()));
             }
         }
@@ -386,7 +386,7 @@ public class OdooSearch {
         Map<String, Map<String, Object>> fieldsMetadata = client.fetchFieldsMetadata(model.getName());
         if (fieldsMetadata != null){
             options.put("fields", fieldsMetadata.keySet().stream()
-                    .filter(fieldName -> !fieldName.equals("picture"))
+                    .filter(fieldName -> !fieldName.equals(Constants.ATTR_PICTURE))
                     .collect(Collectors.toList()));
         }
 
